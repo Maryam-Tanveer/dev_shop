@@ -3,9 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { Flame, ArrowRight, ShieldCheck, Zap, Ticket, ArrowUpRight } from 'lucide-react'
 import { api } from '../../services/api'
 
+const DEFAULT_HERO = {
+  id: 'jordan-6-eastside',
+  productId: 'jordan-6-eastside',
+  name: 'AIR JORDAN 6',
+  edition: 'GX EASTSIDE',
+  description: 'Elevated suede overlays meet championship heritage detailing.',
+  retailPrice: 210,
+  image: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=600&q=80',
+  badge: 'NEW ARRIVAL!',
+}
+
 export default function HeroSection({ onAddToCart, onEventDetails, onSelectProduct }) {
   const navigate = useNavigate()
-  const [heroDrop, setHeroDrop] = useState(null)
+  const [heroDrop, setHeroDrop] = useState(DEFAULT_HERO)
 
   useEffect(() => {
     let isMounted = true
@@ -107,8 +118,8 @@ export default function HeroSection({ onAddToCart, onEventDetails, onSelectProdu
                   {/* Image with boxes mockup */}
                   <div className="relative rounded-xl overflow-hidden border border-[#ded8cb] shadow-lg bg-neutral-200 w-full max-w-[280px]">
                     <img
-                      src={heroDrop.image}
-                      alt={heroDrop.name}
+                      src={heroDrop?.image || DEFAULT_HERO.image}
+                      alt={heroDrop?.name || 'Streetwear Drop'}
                       className="w-full h-48 object-cover transform group-hover:scale-105 transition duration-500"
                     />
                   </div>
