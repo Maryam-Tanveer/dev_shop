@@ -95,8 +95,10 @@ app.all('*', (req, res, next) => {
 // Global Centralized Error Handling Middleware
 app.use(errorHandler)
 
-app.listen(PORT, () => {
-  console.log(`[DEV SHOP API] Server listening at http://localhost:${PORT} in ${NODE_ENV} mode`)
-})
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`[DEV SHOP API] Server listening at http://localhost:${PORT} in ${NODE_ENV} mode`)
+  })
+}
 
 export default app
