@@ -1,0 +1,102 @@
+import express from 'express'
+import cors from 'cors'
+import helmet from 'helmet'
+import dotenv from 'dotenv'
+import { connectDB, getDBStatus } from './config/db.js'
+import { apiLimiter } from './middleware/security.js'
+import errorHandler from './middleware/errorHandler.js'
+import AppError from './utils/AppError.js'
+
+// Route Imports
+import productRoutes from './routes/productRoutes.js'
+import dropRoutes from './routes/dropRoutes.js'
+import collectionRoutes from './routes/collectionRoutes.js'
+import blogRoutes from './routes/blogRoutes.js'
+import faqRoutes from './routes/faqRoutes.js'
+import orderRoutes from './routes/orderRoutes.js'
+import authRoutes from './routes/authRoutes.js'
+import cartRoutes from './routes/cartRoutes.js'
+import wishlistRoutes from './routes/wishlistRoutes.js'
+import userRoutes from './routes/userRoutes.js'
+
+dotenv.config()
+
+const app = express()
+const PORT = process.env.PORT || 5000
+const NODE_ENV = process.env.NODE_ENV || 'development'
+
+// Connect to MongoDB Database (with seamless offline fallback)
+connectDB()
+
+// 1. HTTP Security Headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+)
+
+// 2. CORS Security Configuration
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : ['http://localhost:5173', 'http://127.0.0.1:5173']
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl) or if in allowed list
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        callback(null, true)
+      } else {
+        callback(null, true) // Allow during local dev
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-admin-key'],
+  })
+)
+
+// 3. Body parsers with payload size limits to protect against DoS
+app.use(express.json({ limit: '10kb' }))
+app.use(express.urlencoded({ extended: true, limit: '10kb' }))
+
+// 4. Rate Limiting for all /api endpoints
+app.use('/api', apiLimiter)
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    environment: NODE_ENV,
+    uptime: `${process.uptime().toFixed(1)}s`,
+    database: getDBStatus(),
+    message: 'Dev Shop Drop Vault API is operational',
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// Mount API routes
+app.use('/api/auth', authRoutes)
+app.use('/api/products', productRoutes)
+app.use('/api/cart', cartRoutes)
+app.use('/api/drops', dropRoutes)
+app.use('/api/collections', collectionRoutes)
+app.use('/api/blogs', blogRoutes)
+app.use('/api/faqs', faqRoutes)
+app.use('/api/orders', orderRoutes)
+app.use('/api/wishlist', wishlistRoutes)
+app.use('/api/user', userRoutes)
+
+// 404 Handler for undefined routes
+app.all('*', (req, res, next) => {
+  next(new AppError(`Cannot ${req.method} ${req.originalUrl} - Route not found on this server.`, 404))
+})
+
+// Global Centralized Error Handling Middleware
+app.use(errorHandler)
+
+app.listen(PORT, () => {
+  console.log(`[DEV SHOP API] Server listening at http://localhost:${PORT} in ${NODE_ENV} mode`)
+})
+
+export default app
