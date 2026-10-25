@@ -151,6 +151,38 @@ export const getMe = asyncHandler(async (req, res) => {
  */
 export const googleAuth = asyncHandler(async (req, res) => {
   const { email, name, avatar } = req.body
+  const dbStatus = getDBStatus()
+
+  if (dbStatus.connected) {
+    try {
+      let dbUser = await User.findOne({ email })
+      if (!dbUser) {
+        dbUser = await User.create({
+          name: name || 'Google Collector',
+          email,
+          password: `google-oauth-${Date.now()}-${Math.random()}`,
+          avatar: avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+          memberTier: 'GOOGLE AUTH MEMBER',
+        })
+      }
+      const token = generateToken(dbUser)
+      const safeUser = {
+        id: dbUser._id.toString(),
+        name: dbUser.name,
+        email: dbUser.email,
+        role: dbUser.role,
+        avatar: dbUser.avatar,
+        tier: dbUser.memberTier,
+      }
+      return res.json({
+        success: true,
+        token,
+        user: safeUser,
+      })
+    } catch (err) {
+      console.warn('[GOOGLE AUTH DB NOTICE]:', err.message)
+    }
+  }
 
   let user = findUserByEmail(email)
   if (!user) {

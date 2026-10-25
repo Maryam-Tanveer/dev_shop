@@ -62,7 +62,17 @@ export const getOrderById = asyncHandler(async (req, res, next) => {
 export const createOrder = asyncHandler(async (req, res) => {
   const { email, items, shippingAddress, shippingMethod, paymentMethod } = req.body
 
-  const subtotal = items.reduce((acc, item) => acc + (Number(item.price) || 0) * (item.quantity || 1), 0)
+  const sanitizedItems = (items || []).map((it) => ({
+    productId: String(it.productId || it.id || 'deal-1'),
+    title: it.title || 'Drop Item',
+    price: Number(it.price) || 0,
+    quantity: Math.max(1, Number(it.quantity) || 1),
+    size: it.size || 'Standard',
+    colorway: it.colorway || 'Original',
+    image: it.image || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=400',
+  }))
+
+  const subtotal = sanitizedItems.reduce((acc, item) => acc + (Number(item.price) || 0) * (item.quantity || 1), 0)
   const shippingCost = shippingMethod === 'priority' ? 25.0 : 0.0
   const tax = Number((subtotal * 0.08).toFixed(2))
   const totalAmount = Number((subtotal + shippingCost + tax).toFixed(2))
@@ -71,10 +81,11 @@ export const createOrder = asyncHandler(async (req, res) => {
 
   const newOrderData = {
     orderNumber,
+    user: req.user?._id || req.user?.id || null,
     userEmail: email,
-    items,
+    items: sanitizedItems,
     shippingAddress,
-    shippingMethod: shippingMethod || 'standard',
+    shippingMethod: (shippingMethod || 'standard').toLowerCase(),
     paymentMethod: paymentMethod || 'credit-card',
     subtotal: Number(subtotal.toFixed(2)),
     shippingCost,

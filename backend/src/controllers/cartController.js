@@ -129,7 +129,7 @@ export const priceCart = (req, res) => {
   const subtotal = Number(
     enrichedItems.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)
   )
-  const tax = subtotal > 0 ? 76.80 : 0
+  const tax = Number((subtotal * 0.08).toFixed(2))
   const shipping = subtotal === 0 || subtotal > 200 ? 0 : 25.00
   const total = Number((subtotal + tax + shipping).toFixed(2))
   const itemCount = enrichedItems.reduce((acc, item) => acc + item.quantity, 0)

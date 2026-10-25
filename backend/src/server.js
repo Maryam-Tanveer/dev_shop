@@ -75,6 +75,18 @@ app.get('/api/health', (req, res) => {
   })
 })
 
+// Ensure MongoDB connection is ready before handling requests (crucial for Serverless Vercel)
+app.use(async (req, res, next) => {
+  if (process.env.MONGO_URI && !getDBStatus().connected) {
+    try {
+      await connectDB()
+    } catch {
+      // Graceful continuation
+    }
+  }
+  next()
+})
+
 // Mount API routes
 app.use('/api/auth', authRoutes)
 app.use('/api/products', productRoutes)

@@ -1,32 +1,44 @@
 import mongoose from 'mongoose'
 
-let isConnected = false
+let cachedPromise = null
 
 /**
  * Connect to MongoDB database
- * Falls back gracefully to memory repository if MongoDB is not locally running
+ * Caches connection promise for serverless and checks connection health
  */
 export const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection
+  }
+
+  if (cachedPromise) {
+    return cachedPromise
+  }
+
   const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/devshop'
 
-  try {
-    const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 2500, // Timeout fast if no local MongoDB instance
+  cachedPromise = mongoose
+    .connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+    })
+    .then((conn) => {
+      console.log(`[DATABASE] MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`)
+      return conn
+    })
+    .catch((err) => {
+      cachedPromise = null
+      console.warn(`[DATABASE] Notice: MongoDB connection to ${mongoUri} was not established (${err.message}).`)
+      return null
     })
 
-    isConnected = true
-    console.log(`[DATABASE] MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`)
-    return conn
-  } catch (err) {
-    isConnected = false
-    console.warn(`[DATABASE] Notice: MongoDB connection to ${mongoUri} was not established (${err.message}).`)
-    console.warn(`[DATABASE] Operating in hybrid repository mode with high-performance in-memory persistence.`)
-    return null
-  }
+  return cachedPromise
 }
 
-export const getDBStatus = () => ({
-  connected: isConnected,
-  readyState: mongoose.connection.readyState,
-  status: isConnected ? 'connected' : 'offline_fallback',
-})
+export const getDBStatus = () => {
+  const isConn = mongoose.connection.readyState === 1
+  return {
+    connected: isConn,
+    readyState: mongoose.connection.readyState,
+    status: isConn ? 'connected' : 'offline_fallback',
+  }
+}

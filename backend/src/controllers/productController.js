@@ -20,8 +20,37 @@ import { getDBStatus } from '../config/db.js'
 /**
  * Get all products (Lightweight shape) with optional filtering by category, brand, or search query
  */
-export const getProducts = (req, res) => {
+export const getProducts = asyncHandler(async (req, res) => {
   const { category, brand, q } = req.query
+  const dbStatus = getDBStatus()
+
+  if (dbStatus.connected) {
+    try {
+      const filter = {}
+      if (category && category !== 'All') {
+        filter.category = new RegExp(`^${category}$`, 'i')
+      }
+      if (brand && brand !== 'All') {
+        filter.brand = new RegExp(brand, 'i')
+      }
+      if (q && q.trim()) {
+        const queryRegex = new RegExp(q.trim(), 'i')
+        filter.$or = [{ title: queryRegex }, { fullTitle: queryRegex }, { brand: queryRegex }]
+      }
+
+      const dbProducts = await Product.find(filter).lean()
+      if (dbProducts && dbProducts.length > 0) {
+        return res.json({
+          success: true,
+          count: dbProducts.length,
+          data: dbProducts.map(toLightProduct),
+        })
+      }
+    } catch (err) {
+      console.warn('[DB GET PRODUCTS NOTICE]:', err.message)
+    }
+  }
+
   let results = [...LIGHT_PRODUCTS]
 
   if (category && category !== 'All') {
@@ -51,13 +80,29 @@ export const getProducts = (req, res) => {
     count: results.length,
     data: results
   })
-}
+})
 
 /**
  * Get single product by ID (Full Detail shape)
  */
-export const getProductById = (req, res, next) => {
+export const getProductById = asyncHandler(async (req, res, next) => {
   const { id } = req.params
+  const dbStatus = getDBStatus()
+
+  if (dbStatus.connected) {
+    try {
+      const dbProduct = await Product.findOne({ id }).lean()
+      if (dbProduct) {
+        return res.json({
+          success: true,
+          data: toDetailProduct(dbProduct)
+        })
+      }
+    } catch (err) {
+      console.warn('[DB GET PRODUCT BY ID NOTICE]:', err.message)
+    }
+  }
+
   const rawProduct = lookupProduct(id)
 
   if (!rawProduct) {
@@ -70,7 +115,7 @@ export const getProductById = (req, res, next) => {
     success: true,
     data: fullProduct
   })
-}
+})
 
 /**
  * Get best deals (Lightweight shape)

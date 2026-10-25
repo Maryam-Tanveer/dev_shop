@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema(
       {
         productId: { type: String, required: true },
         title: { type: String, required: true },
-        image: { type: String, required: true },
+        image: { type: String, default: '' },
         size: { type: String, default: 'Standard' },
         colorway: { type: String, default: 'Original' },
         price: { type: Number, required: true },
