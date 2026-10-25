@@ -63,18 +63,6 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 // 4. Rate Limiting for all /api endpoints
 app.use('/api', apiLimiter)
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    environment: NODE_ENV,
-    uptime: `${process.uptime().toFixed(1)}s`,
-    database: getDBStatus(),
-    message: 'Dev Shop Drop Vault API is operational',
-    timestamp: new Date().toISOString(),
-  })
-})
-
 // Ensure MongoDB connection is ready before handling requests (crucial for Serverless Vercel)
 app.use(async (req, res, next) => {
   const hasUri = process.env.MONGO_URI || process.env.MONGODB_URI
@@ -86,6 +74,18 @@ app.use(async (req, res, next) => {
     }
   }
   next()
+})
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    environment: NODE_ENV,
+    uptime: `${process.uptime().toFixed(1)}s`,
+    database: getDBStatus(),
+    message: 'Dev Shop Drop Vault API is operational',
+    timestamp: new Date().toISOString(),
+  })
 })
 
 // Mount API routes
