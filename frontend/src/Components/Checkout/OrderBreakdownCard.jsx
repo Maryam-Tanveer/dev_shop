@@ -13,7 +13,7 @@ export default function OrderBreakdownCard({
 
   // Subtotal & Exact Breakdown matching items in cart
   const subtotal = items.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0)
-  const tax = subtotal > 0 ? 76.80 : 0
+  const tax = Number((subtotal * taxRate).toFixed(2))
   const total = Number((Math.max(0, subtotal - discount + shippingCost + tax)).toFixed(2))
 
   const handleApplyPromo = (e) => {

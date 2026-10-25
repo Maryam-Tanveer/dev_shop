@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Info, QrCode, FileText, ShoppingBag, Printer, Download, CheckCircle, X } from 'lucide-react'
 
 export default function OrderSummarySidebar({
+  order,
   onViewAccount,
   onContinueShopping,
   onPrintInvoice,
@@ -9,9 +10,21 @@ export default function OrderSummarySidebar({
 }) {
   const [showToast, setShowToast] = useState(true)
 
+  const items = order?.items || []
+  const subtotal = order?.subtotal !== undefined
+    ? Number(order.subtotal)
+    : (items.length > 0
+        ? items.reduce((sum, it) => sum + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0)
+        : 959.95)
+
+  const shippingCost = order?.shippingCost !== undefined ? Number(order.shippingCost) : 0
+  const tax = order?.tax !== undefined ? Number(order.tax) : Number((subtotal * 0.08).toFixed(2))
+  const totalAmount = order?.totalAmount !== undefined ? Number(order.totalAmount) : Number((subtotal + shippingCost + tax).toFixed(2))
+  const orderNumber = order?.orderNumber || (order?._id ? `DS-${order._id.slice(-7).toUpperCase()}` : 'DS-8492019')
+
   return (
     <div className="space-y-6 relative">
-      {/* Floating Inspection Toast (as shown in screenshot) */}
+      {/* Floating Inspection Toast */}
       {showToast && (
         <div className="bg-[#121212] text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-neutral-700 flex items-center justify-between gap-3 animate-fade-in relative z-20">
           <div className="flex items-center gap-3">
@@ -23,14 +36,14 @@ export default function OrderSummarySidebar({
                 Vault Inspection Started
               </h5>
               <p className="text-[10px] text-neutral-400 mt-0.5">
-                Specialist #409 assigned to DS-8492019
+                Specialist assigned to {orderNumber}
               </p>
             </div>
           </div>
 
           <button
             onClick={() => setShowToast(false)}
-            className="text-neutral-400 hover:text-white transition p-1"
+            className="text-neutral-400 hover:text-white transition p-1 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -47,7 +60,7 @@ export default function OrderSummarySidebar({
         <div className="space-y-3 text-xs pb-4 border-b border-neutral-100">
           <div className="flex justify-between text-neutral-600">
             <span>Items Subtotal</span>
-            <span className="font-bold text-neutral-900">$959.95</span>
+            <span className="font-bold text-neutral-900">${subtotal.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between items-center text-neutral-600">
@@ -55,12 +68,14 @@ export default function OrderSummarySidebar({
               <span>Express Vault Courier</span>
               <Info className="w-3 h-3 text-neutral-400" />
             </span>
-            <span className="font-black text-[#c81d25]">FREE</span>
+            <span className="font-black text-[#c81d25]">
+              {shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'FREE'}
+            </span>
           </div>
 
           <div className="flex justify-between text-neutral-600">
-            <span>NYC State & Local Tax (8%)</span>
-            <span className="font-bold text-neutral-900">$76.80</span>
+            <span>State & Local Tax (8%)</span>
+            <span className="font-bold text-neutral-900">${tax.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between items-center text-neutral-600">
@@ -75,7 +90,7 @@ export default function OrderSummarySidebar({
             <span className="text-sm font-black text-neutral-900 block">Total Paid</span>
             <span className="text-[9px] font-bold text-neutral-400 uppercase">INCLUDES TAX & DUTIES</span>
           </div>
-          <span className="text-2xl font-black text-[#c81d25]">$1,036.75</span>
+          <span className="text-2xl font-black text-[#c81d25]">${totalAmount.toFixed(2)}</span>
         </div>
 
         {/* Digital Vault Pass QR Box */}

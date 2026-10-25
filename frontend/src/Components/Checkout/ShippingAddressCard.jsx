@@ -1,19 +1,35 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Truck, ChevronDown } from 'lucide-react'
 
 export default function ShippingAddressCard({
+  initialAddress,
   onChange
 }) {
   const [formData, setFormData] = useState({
-    firstName: 'Marcus',
-    lastName: 'Vance',
-    streetAddress: '482 Mercer Street, Soho District',
-    apartment: 'Loft 3B',
-    city: 'New York',
-    state: 'New York (NY)',
-    postalCode: '10013',
-    country: 'United States'
+    firstName: initialAddress?.firstName || '',
+    lastName: initialAddress?.lastName || '',
+    streetAddress: initialAddress?.address || initialAddress?.streetAddress || '',
+    apartment: initialAddress?.apartment || '',
+    city: initialAddress?.city || '',
+    state: initialAddress?.state || '',
+    postalCode: initialAddress?.zipCode || initialAddress?.postalCode || '',
+    country: initialAddress?.country || 'United States'
   })
+
+  useEffect(() => {
+    if (initialAddress) {
+      setFormData((prev) => ({
+        firstName: initialAddress.firstName !== undefined ? initialAddress.firstName : prev.firstName,
+        lastName: initialAddress.lastName !== undefined ? initialAddress.lastName : prev.lastName,
+        streetAddress: initialAddress.address || initialAddress.streetAddress || prev.streetAddress,
+        apartment: initialAddress.apartment || prev.apartment,
+        city: initialAddress.city || prev.city,
+        state: initialAddress.state || prev.state,
+        postalCode: initialAddress.zipCode || initialAddress.postalCode || prev.postalCode,
+        country: initialAddress.country || prev.country
+      }))
+    }
+  }, [initialAddress])
 
   const handleChange = (field, value) => {
     const updated = { ...formData, [field]: value }

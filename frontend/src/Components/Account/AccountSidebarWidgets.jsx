@@ -14,7 +14,15 @@ export default function AccountSidebarWidgets({
   } catch (e) {
     // fallback outside provider
   }
-  const recipientName = auth?.currentUser?.name || 'Dev Shop Member'
+  const currentUser = auth?.currentUser
+  const recipientName = currentUser?.name || 'Dev Shop Member'
+  const defaultAddr = currentUser?.addresses?.find((a) => a.isDefault) || currentUser?.addresses?.[0]
+  const streetLine = defaultAddr?.address || defaultAddr?.streetAddress || '482 Mercer Street'
+  const aptLine = defaultAddr?.apartment || 'Loft 3B'
+  const cityStateZip = [defaultAddr?.city || 'New York', defaultAddr?.state || 'NY', defaultAddr?.zipCode || defaultAddr?.postalCode || '10013'].filter(Boolean).join(', ')
+  const countryLine = defaultAddr?.country || 'United States'
+  const phoneLine = currentUser?.phone || '+1 (212) 840-9124'
+  const secondaryCount = Math.max(0, (currentUser?.addresses?.length || 1) - 1)
 
   return (
     <div className="space-y-6">
@@ -29,7 +37,7 @@ export default function AccountSidebarWidgets({
           </div>
           <button
             onClick={onEditShipping}
-            className="text-xs font-bold text-[#c81d25] hover:underline"
+            className="text-xs font-bold text-[#c81d25] hover:underline cursor-pointer"
           >
             Edit
           </button>
@@ -42,20 +50,20 @@ export default function AccountSidebarWidgets({
               DEFAULT
             </span>
           </div>
-          <p>482 Mercer Street</p>
-          <p>Soho District, Loft 3B</p>
-          <p>New York, NY 10013</p>
-          <p>United States</p>
-          <p className="pt-1 text-neutral-500 font-medium">+1 (212) 840-9124</p>
+          <p>{streetLine}</p>
+          {aptLine && <p>{aptLine}</p>}
+          <p>{cityStateZip}</p>
+          <p>{countryLine}</p>
+          <p className="pt-1 text-neutral-500 font-medium">{phoneLine}</p>
         </div>
 
         <div className="flex items-center justify-between text-[11px] pt-3 border-t border-neutral-100 text-neutral-500">
-          <span>2 Secondary addresses saved</span>
+          <span>{secondaryCount > 0 ? `${secondaryCount} Secondary address(es) saved` : 'Default verified address'}</span>
           <button
             onClick={onEditShipping}
-            className="text-[#c81d25] font-bold hover:underline"
+            className="text-[#c81d25] font-bold hover:underline cursor-pointer"
           >
-            View All
+            Manage
           </button>
         </div>
       </div>
@@ -71,7 +79,7 @@ export default function AccountSidebarWidgets({
           </div>
           <button
             onClick={onManagePayment}
-            className="text-xs font-bold text-[#c81d25] hover:underline"
+            className="text-xs font-bold text-[#c81d25] hover:underline cursor-pointer"
           >
             Manage
           </button>
@@ -95,7 +103,7 @@ export default function AccountSidebarWidgets({
           <div className="flex items-end justify-between text-[9px] font-bold uppercase tracking-wider text-neutral-400">
             <div>
               <span className="block text-[8px] text-neutral-500">CARDHOLDER</span>
-              <span className="text-white">MARCUS VANCE</span>
+              <span className="text-white">{recipientName.toUpperCase()}</span>
             </div>
             <div className="text-right">
               <span className="block text-[8px] text-neutral-500">EXPIRES</span>

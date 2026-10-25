@@ -1,7 +1,24 @@
 import { ShieldCheck, Tag } from 'lucide-react'
 import { ORDER_PURCHASED_ITEMS as items } from '../../data/orders'
 
-export default function OrderPurchasedItems() {
+export default function OrderPurchasedItems({ items: customItems }) {
+  const items = (customItems && customItems.length > 0)
+    ? customItems.map((item, idx) => ({
+        id: item.id || item._id || item.productId || idx,
+        title: item.title || item.name || 'Drop Grail Item',
+        image: item.image || item.thumbnails?.[0]?.image || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=400',
+        price: Number(item.price || 0),
+        size: item.size || '10.5 US',
+        condition: item.condition || 'Deadstock / Unworn',
+        qty: item.quantity || item.qty || 1,
+        skuTag: item.skuTag || 'VERIFIED AUTHENTIC',
+        sku: item.sku || `SKU-DEV-${1000 + idx}`,
+        badge: item.badge || 'VERIFIED',
+        badgeColor: item.badgeColor || 'bg-black text-white',
+        subBadge: item.subBadge || 'Vault Verified',
+        subBadgeColor: item.subBadgeColor || 'text-emerald-600',
+      }))
+    : ORDER_PURCHASED_ITEMS
 
   return (
     <div className="bg-white rounded-3xl border border-neutral-200/90 p-6 sm:p-7 shadow-xs mb-6">

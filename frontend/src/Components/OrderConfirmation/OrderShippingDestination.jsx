@@ -2,6 +2,8 @@ import { MapPin, Clock, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 export default function OrderShippingDestination({
+  shippingAddress,
+  recipientName: propRecipientName,
   onAddGateCode
 }) {
   let auth = null
@@ -10,7 +12,21 @@ export default function OrderShippingDestination({
   } catch (e) {
     // fallback outside provider
   }
-  const recipientName = auth?.currentUser?.name || 'Customer'
+  const defaultUserAddress = auth?.currentUser?.addresses?.find((a) => a.isDefault) || auth?.currentUser?.addresses?.[0]
+  const resolvedAddress = shippingAddress || defaultUserAddress
+
+  const displayRecipient = propRecipientName || 
+    (resolvedAddress?.firstName ? `${resolvedAddress.firstName} ${resolvedAddress.lastName || ''}`.trim() : null) || 
+    auth?.currentUser?.name || 
+    'VIP Collector'
+
+  const line1 = resolvedAddress?.address || resolvedAddress?.streetAddress || '482 Mercer Street, Loft 3B'
+  const line2 = [
+    resolvedAddress?.city,
+    resolvedAddress?.state,
+    resolvedAddress?.zipCode || resolvedAddress?.postalCode,
+    resolvedAddress?.country
+  ].filter(Boolean).join(', ') || 'Soho District, New York, NY 10013'
 
   return (
     <div className="bg-white rounded-3xl border border-neutral-200/90 p-6 sm:p-7 shadow-xs">
@@ -36,10 +52,10 @@ export default function OrderShippingDestination({
             RECIPIENT NAME
           </span>
           <h4 className="text-sm font-black text-neutral-900 mb-0.5">
-            {recipientName}
+            {displayRecipient}
           </h4>
           <p className="text-xs text-neutral-500 font-medium">
-            Dev Shop Elite VIP Member (#DS-ELITE-99)
+            Dev Shop Verified Member
           </p>
         </div>
 
@@ -49,10 +65,10 @@ export default function OrderShippingDestination({
             SHIPPING ADDRESS
           </span>
           <h4 className="text-sm font-black text-neutral-900 mb-0.5">
-            482 Mercer Street, Loft 3B
+            {line1}
           </h4>
           <p className="text-xs text-neutral-500 font-medium">
-            Soho District, New York, NY 10013
+            {line2}
           </p>
         </div>
       </div>

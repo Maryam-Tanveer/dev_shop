@@ -42,10 +42,49 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     setTimeout(() => setToast(null), 2500)
   }
 
+  const defaultAddr = currentUser?.addresses?.find((a) => a.isDefault) || currentUser?.addresses?.[0]
+  const [shippingAddress, setShippingAddress] = useState({
+    firstName: currentUser?.name?.split(' ')[0] || defaultAddr?.firstName || '',
+    lastName: currentUser?.name?.split(' ')[1] || defaultAddr?.lastName || '',
+    address: defaultAddr?.address || '',
+    apartment: defaultAddr?.apartment || '',
+    city: defaultAddr?.city || '',
+    state: defaultAddr?.state || '',
+    zipCode: defaultAddr?.zipCode || '',
+    country: defaultAddr?.country || 'US',
+  })
+
+  const [contactInfo, setContactInfo] = useState({
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '',
+  })
+
+  useEffect(() => {
+    if (currentUser) {
+      const def = currentUser.addresses?.find((a) => a.isDefault) || currentUser.addresses?.[0]
+      setContactInfo((prev) => ({
+        email: currentUser.email || prev.email,
+        phone: currentUser.phone || prev.phone,
+      }))
+      if (def) {
+        setShippingAddress({
+          firstName: def.firstName || currentUser.name?.split(' ')[0] || '',
+          lastName: def.lastName || currentUser.name?.split(' ')[1] || '',
+          address: def.address || '',
+          apartment: def.apartment || '',
+          city: def.city || '',
+          state: def.state || '',
+          zipCode: def.zipCode || '',
+          country: def.country || 'US',
+        })
+      }
+    }
+  }, [currentUser])
+
   // Calculations matching cart content
   const shippingCost = items.length > 0 ? (shippingMethod === 'priority' ? 25.00 : 0.00) : 0.00
   const subtotal = items.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0)
-  const tax = subtotal > 0 ? 76.80 : 0.00
+  const tax = Number((subtotal * 0.08).toFixed(2))
   const totalAmount = Number((Math.max(0, subtotal - discountAmount + shippingCost + tax)).toFixed(2))
 
   const handleNavClick = (navItem) => {
@@ -69,10 +108,14 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     showToast('Securing allocation & dispatching email invoice...')
 
     try {
+      const resolvedAddress = shippingAddress.streetAddress || shippingAddress.address || 'Vault Delivery Hub'
+      const resolvedCity = shippingAddress.city || 'New York'
+      const resolvedZip = shippingAddress.postalCode || shippingAddress.zipCode || '10012'
+
       const orderPayload = {
-        email: currentUser?.email || 'collector@devshop.io',
+        email: contactInfo.email || currentUser?.email || 'collector@devshop.io',
         items: items.map((it) => ({
-          productId: it.id || it.productId || 'deal-1',
+          productId: String(it.id || it.productId || 'deal-1'),
           title: it.title || it.name || 'Drop Silhouette',
           price: Number(it.price || 0),
           quantity: it.quantity || 1,
@@ -81,13 +124,14 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
           image: it.image || it.thumbnails?.[0]?.image || '',
         })),
         shippingAddress: {
-          firstName: currentUser?.name?.split(' ')[0] || 'Collector',
-          lastName: currentUser?.name?.split(' ')[1] || 'Member',
-          address: '124 Mercer St',
-          city: 'New York',
-          state: 'NY',
-          zipCode: '10012',
-          country: 'US',
+          firstName: shippingAddress.firstName || currentUser?.name?.split(' ')[0] || 'Collector',
+          lastName: shippingAddress.lastName || currentUser?.name?.split(' ')[1] || 'Member',
+          address: resolvedAddress,
+          apartment: shippingAddress.apartment || '',
+          city: resolvedCity,
+          state: shippingAddress.state || 'NY',
+          zipCode: resolvedZip,
+          country: shippingAddress.country || 'US',
         },
         shippingMethod,
         paymentMethod: 'credit-card',
@@ -228,12 +272,16 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
             {/* Left 7 Columns: Form details (Contact, Shipping Address, Shipping Method) */}
             <div className="lg:col-span-7 space-y-6">
               <ContactInformationCard
-                email="alex.turner@hypearchive.io"
-                phone="+1 (555) 234-8901"
+                email={contactInfo.email}
+                phone={contactInfo.phone}
+                onChange={setContactInfo}
                 onLoginClick={() => onNavigate && onNavigate('LOGIN')}
               />
 
-              <ShippingAddressCard />
+              <ShippingAddressCard
+                initialAddress={shippingAddress}
+                onChange={setShippingAddress}
+              />
 
               <ShippingMethodCard
                 selectedMethod={shippingMethod}

@@ -17,6 +17,13 @@ const DEFAULT_HERO = {
 export default function HeroSection({ onAddToCart, onEventDetails, onSelectProduct }) {
   const navigate = useNavigate()
   const [heroDrop, setHeroDrop] = useState(DEFAULT_HERO)
+  const [festivalPass, setFestivalPass] = useState({
+    title: 'DISC UP TO 50% FOR SNEAKERS FEST ID 2026',
+    description: 'Exclusive cultural showcase ticket perks, archive deadstock releases, and daily giveaway draws for all registered members.',
+    allocationPercent: 82,
+    allocationText: 'Tier-1 Passes Claimed',
+    badge: 'SPECIAL PASS',
+  })
 
   useEffect(() => {
     let isMounted = true
@@ -29,6 +36,20 @@ export default function HeroSection({ onAddToCart, onEventDetails, onSelectProdu
       })
       .catch((err) => {
         console.error('Failed to load hero drop from API:', err)
+      })
+
+    api
+      .getFestivalPass()
+      .then((pass) => {
+        if (isMounted && pass) {
+          setFestivalPass((prev) => ({
+            ...prev,
+            ...pass,
+          }))
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load festival pass from API:', err)
       })
 
     return () => {
@@ -127,7 +148,7 @@ export default function HeroSection({ onAddToCart, onEventDetails, onSelectProdu
                   {/* Retail Drop Tag */}
                   <div className="absolute -bottom-3 right-2 bg-white border border-neutral-200/90 rounded-full px-3 py-1 text-[11px] font-extrabold text-neutral-900 shadow-md flex items-center gap-1.5 group-hover:border-[#c81d25] transition">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#c81d25]"></span>
-                    <span>Retail Drop: $210</span>
+                    <span>Retail Drop: ${heroDrop?.retailPrice || 210}</span>
                   </div>
                 </div>
               </div>
@@ -156,31 +177,31 @@ export default function HeroSection({ onAddToCart, onEventDetails, onSelectProdu
             {/* Badge */}
             <div className="inline-flex items-center gap-1.5 bg-white/20 text-white text-[10px] font-extrabold tracking-widest uppercase px-3 py-1 rounded-full backdrop-blur-xs">
               <Ticket className="w-3 h-3" />
-              <span>SPECIAL PASS</span>
+              <span>{festivalPass?.badge || 'SPECIAL PASS'}</span>
             </div>
 
             {/* Title */}
             <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight mt-4 uppercase">
-              DISC UP TO 50% FOR SNEAKERS FEST ID 2023
+              {festivalPass?.title || 'DISC UP TO 50% FOR SNEAKERS FEST'}
             </h2>
 
             {/* Description */}
             <p className="text-xs text-white/80 mt-3 leading-relaxed">
-              Exclusive cultural showcase ticket perks, archive deadstock releases, and daily giveaway draws for all registered members.
+              {festivalPass?.description || 'Exclusive cultural showcase ticket perks, archive deadstock releases, and daily giveaway draws for all registered members.'}
             </p>
 
             {/* Allocation Cap Meter Box */}
             <div className="bg-black/25 border border-white/15 rounded-xl p-3.5 flex items-center gap-3.5 my-6 backdrop-blur-xs">
               {/* Circular Gauge */}
               <div className="w-12 h-12 rounded-full border-4 border-white/20 border-t-white flex items-center justify-center font-extrabold text-xs text-white flex-shrink-0">
-                82%
+                {festivalPass?.allocationPercent || 82}%
               </div>
               <div>
                 <div className="text-[10px] font-bold text-white/70 uppercase tracking-wider">
                   ALLOCATION CAP
                 </div>
                 <div className="text-xs font-extrabold text-white">
-                  Tier-1 Passes Claimed
+                  {festivalPass?.allocationText || 'Tier-1 Passes Claimed'}
                 </div>
               </div>
             </div>

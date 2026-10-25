@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { ArrowRight, ShieldCheck, RotateCcw, Lock, Info, MessageSquare } from 'lucide-react'
 
 export default function CartOrderSummary({
-  subtotal = 959.95,
-  itemCount = 2,
+  subtotal = 0,
+  itemCount = 0,
   onProceedCheckout,
   onOpenChat,
   onApplyPromo

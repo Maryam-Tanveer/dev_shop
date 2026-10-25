@@ -108,9 +108,16 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
                 onViewDigitalPass={() => setIsTrackingModalOpen(true)}
               />
 
-              <OrderPurchasedItems />
+              <OrderPurchasedItems items={activeOrder.items} />
 
               <OrderShippingDestination
+                shippingAddress={activeOrder.shippingAddress}
+                recipientName={
+                  activeOrder.shippingAddress?.fullName ||
+                  (activeOrder.shippingAddress?.firstName
+                    ? `${activeOrder.shippingAddress.firstName} ${activeOrder.shippingAddress.lastName || ''}`.trim()
+                    : null)
+                }
                 onAddGateCode={() => showToast('Gate code modal opened. Driver will be notified.')}
               />
             </div>
@@ -118,6 +125,7 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
             {/* Right 5 Columns: Summary, Concierge, Suggested Pair */}
             <div className="lg:col-span-5 space-y-6">
               <OrderSummarySidebar
+                order={activeOrder}
                 onViewAccount={() => (onNavigate ? onNavigate('ACCOUNT') : navigate('/account'))}
                 onContinueShopping={() => (onNavigate ? onNavigate('PRODUCTS') : navigate('/products'))}
                 onPrintInvoice={() => window.print()}

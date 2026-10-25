@@ -1,14 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Contact, Check } from 'lucide-react'
 
 export default function ContactInformationCard({
-  email = 'alex.turner@hypearchive.io',
-  phone = '+1 (555) 234-8901',
-  onLoginClick
+  email = '',
+  phone = '',
+  onLoginClick,
+  onChange,
 }) {
   const [emailVal, setEmailVal] = useState(email)
   const [phoneVal, setPhoneVal] = useState(phone)
   const [keepUpdated, setKeepUpdated] = useState(true)
+
+  useEffect(() => {
+    if (email) setEmailVal(email)
+  }, [email])
+
+  useEffect(() => {
+    if (phone) setPhoneVal(phone)
+  }, [phone])
+
+  const handleEmailChange = (val) => {
+    setEmailVal(val)
+    if (onChange) onChange({ email: val, phone: phoneVal })
+  }
+
+  const handlePhoneChange = (val) => {
+    setPhoneVal(val)
+    if (onChange) onChange({ email: emailVal, phone: val })
+  }
 
   return (
     <div className="bg-white rounded-3xl border border-neutral-200/90 p-6 sm:p-7 shadow-xs">
@@ -45,7 +64,7 @@ export default function ContactInformationCard({
           <input
             type="email"
             value={emailVal}
-            onChange={(e) => setEmailVal(e.target.value)}
+            onChange={(e) => handleEmailChange(e.target.value)}
             className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none"
             placeholder="your.email@example.com"
           />
@@ -59,7 +78,7 @@ export default function ContactInformationCard({
           <input
             type="tel"
             value={phoneVal}
-            onChange={(e) => setPhoneVal(e.target.value)}
+            onChange={(e) => handlePhoneChange(e.target.value)}
             className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none"
             placeholder="+1 (555) 000-0000"
           />
