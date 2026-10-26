@@ -7,8 +7,6 @@ import { api } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
 
-const DEFAULT_SECRET_KEY = 'DEV_VAULT_ADMIN_2026'
-
 const PRESET_IMAGES = [
   {
     name: 'Travis Scott Jordan 1',
@@ -30,18 +28,11 @@ const PRESET_IMAGES = [
 
 export default function AdminPage() {
   const navigate = useNavigate()
-  const { currentUser } = useAuth()
+  const { currentUser, logout } = useAuth()
   const { items, removeFromCart } = useCart()
 
-  // Admin access state
-  const [adminKey, setAdminKey] = useState(() => {
-    return localStorage.getItem('devshop_admin_key') || ''
-  })
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('devshop_admin_key') === DEFAULT_SECRET_KEY || currentUser?.role === 'admin'
-  })
-  const [passcodeInput, setPasscodeInput] = useState('')
-  const [passcodeError, setPasscodeError] = useState('')
+  // Strict role-based authentication: Only JWT users with role === 'admin'
+  const isAdmin = currentUser?.role === 'admin'
 
   // Inventory state
   const [products, setProducts] = useState([])
@@ -104,31 +95,10 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAdmin) {
       loadProducts()
     }
-  }, [isAuthenticated])
-
-  // Handle Passcode Unlock
-  const handleUnlock = (e) => {
-    e?.preventDefault()
-    if (passcodeInput.trim() === DEFAULT_SECRET_KEY || passcodeInput.trim().toUpperCase() === 'ADMIN') {
-      localStorage.setItem('devshop_admin_key', DEFAULT_SECRET_KEY)
-      setAdminKey(DEFAULT_SECRET_KEY)
-      setIsAuthenticated(true)
-      setPasscodeError('')
-      showToast('Vault Command Console Unlocked!')
-    } else {
-      setPasscodeError('Invalid Admin Passcode. Use DEV_VAULT_ADMIN_2026')
-    }
-  }
-
-  const handleLogoutAdmin = () => {
-    localStorage.removeItem('devshop_admin_key')
-    setAdminKey('')
-    setIsAuthenticated(false)
-    showToast('Vault Command Console Locked.')
-  }
+  }, [isAdmin])
 
   // Update Stock Status
   const handleUpdateStatus = async (productId, newStatus, currentStock) => {
@@ -142,7 +112,7 @@ export default function AdminPage() {
         stockStatus: newStatus,
         stock: nextStock,
         isUnavailable: newStatus === 'Sold Out' || newStatus === 'TBA',
-      }, adminKey)
+      })
 
       setProducts((prev) =>
         prev.map((p) =>
@@ -169,7 +139,7 @@ export default function AdminPage() {
         stock: newCount,
         stockStatus: newStatus,
         isUnavailable: newCount === 0,
-      }, adminKey)
+      })
 
       setProducts((prev) =>
         prev.map((p) =>
@@ -189,7 +159,7 @@ export default function AdminPage() {
     }
 
     try {
-      await api.deleteProduct(productId, adminKey)
+      await api.deleteProduct(productId)
       setProducts((prev) => prev.filter((p) => p.id !== productId))
       showToast(`Drop "${title}" removed from vault.`)
     } catch (err) {
@@ -220,7 +190,7 @@ export default function AdminPage() {
         description: newDrop.description.trim() || undefined,
       }
 
-      const res = await api.createProduct(payload, adminKey)
+      const res = await api.createProduct(payload)
       if (res.data) {
         setProducts((prev) => [res.data, ...prev])
       } else {
@@ -300,8 +270,8 @@ export default function AdminPage() {
 
       {/* Main Container */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!isAuthenticated ? (
-          /* ================= SECRET GATEKEEPER PASSCODE SCREEN ================= */
+        {!currentUser ? (
+          /* ================= GUEST NOT LOGGED IN ================= */
           <div className="max-w-md mx-auto my-16 bg-[#16161f] border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl text-center relative overflow-hidden backdrop-blur-xl">
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#c81d25]/20 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -315,48 +285,69 @@ export default function AdminPage() {
             </div>
 
             <h1 className="text-2xl font-black tracking-tight text-white uppercase mb-2">
-              Drop Manager Console
+              Administrator Login Required
             </h1>
             <p className="text-xs text-neutral-400 mb-8 leading-relaxed">
-              Authenticate with your Admin Passkey to deploy new high-heat streetwear allocations and toggle live stock telemetry.
+              This console requires Tier-0 Administrator authentication. Please sign in with your administrator account to access drop deployment and stock controls.
             </p>
 
-            <form onSubmit={handleUnlock} className="space-y-4">
-              <div>
-                <input
-                  type="password"
-                  placeholder="Enter Vault Admin Key"
-                  value={passcodeInput}
-                  onChange={(e) => setPasscodeInput(e.target.value)}
-                  className="w-full bg-[#0e0e14] border border-white/10 focus:border-[#c81d25] rounded-xl px-4 py-3.5 text-sm text-center font-mono tracking-widest text-white placeholder-neutral-600 focus:outline-none transition"
-                  autoFocus
-                />
-                {passcodeError && (
-                  <p className="text-[11px] text-red-400 mt-2 font-medium">{passcodeError}</p>
-                )}
-              </div>
-
+            <div className="space-y-3">
               <button
-                type="submit"
-                className="w-full bg-[#c81d25] hover:bg-[#a5151c] active:scale-[0.98] text-white font-bold py-3.5 rounded-xl transition text-xs tracking-wider uppercase shadow-lg shadow-[#c81d25]/25"
+                type="button"
+                onClick={() => navigate('/login')}
+                className="w-full bg-[#c81d25] hover:bg-[#a5151c] active:scale-[0.98] text-white font-bold py-3.5 rounded-xl transition text-xs tracking-wider uppercase shadow-lg shadow-[#c81d25]/25 cursor-pointer"
               >
-                Authenticate & Unlock
+                Sign In as Administrator
               </button>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="w-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white text-xs font-semibold py-3 rounded-xl transition border border-white/10 cursor-pointer"
+              >
+                Return to Storefront
+              </button>
+            </div>
+          </div>
+        ) : !isAdmin ? (
+          /* ================= LOGGED IN BUT NOT ADMIN ================= */
+          <div className="max-w-md mx-auto my-16 bg-[#16161f] border border-amber-500/20 rounded-3xl p-8 sm:p-10 shadow-2xl text-center relative overflow-hidden backdrop-blur-xl">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl">
+              ⚠️
+            </div>
 
+            <div className="inline-block px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-mono tracking-widest uppercase mb-3">
+              403 FORBIDDEN — ADMIN PRIVILEGES REQUIRED
+            </div>
+
+            <h1 className="text-2xl font-black tracking-tight text-white uppercase mb-2">
+              Access Denied
+            </h1>
+            <p className="text-xs text-neutral-300 mb-2 leading-relaxed">
+              Currently signed in as <strong className="text-white">{currentUser.email}</strong> ({currentUser.name || 'Member'}).
+            </p>
+            <p className="text-xs text-neutral-400 mb-8 leading-relaxed">
+              Your account does not have Tier-0 administrator privileges. Please sign in with an administrator account to access the Drop Manager Console.
+            </p>
+
+            <div className="space-y-3">
               <button
                 type="button"
                 onClick={() => {
-                  setPasscodeInput(DEFAULT_SECRET_KEY)
-                  localStorage.setItem('devshop_admin_key', DEFAULT_SECRET_KEY)
-                  setAdminKey(DEFAULT_SECRET_KEY)
-                  setIsAuthenticated(true)
-                  showToast('Authenticated using Master Passcode')
+                  logout()
+                  navigate('/login')
                 }}
-                className="w-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white text-[11px] font-mono py-2.5 rounded-xl transition border border-white/5"
+                className="w-full bg-[#c81d25] hover:bg-[#a5151c] active:scale-[0.98] text-white font-bold py-3.5 rounded-xl transition text-xs tracking-wider uppercase shadow-lg shadow-[#c81d25]/25 cursor-pointer"
               >
-                ⚡ Quick Unlock (DEV_VAULT_ADMIN_2026)
+                Sign In with Admin Account
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="w-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white text-xs font-semibold py-3 rounded-xl transition border border-white/10 cursor-pointer"
+              >
+                Return to Storefront
+              </button>
+            </div>
           </div>
         ) : (
           /* ================= AUTHENTICATED DROP MANAGER CONSOLE ================= */
@@ -367,7 +358,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-3">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-[11px] font-mono tracking-wider text-emerald-400 uppercase font-semibold">
-                    VAULT COMMAND ONLINE // TIER-0 PRIVILEGES
+                    VAULT COMMAND ONLINE // ADMIN: {currentUser.name || currentUser.email}
                   </span>
                 </div>
                 <h1 className="text-3xl font-black uppercase tracking-tight text-white mt-1">
@@ -381,16 +372,16 @@ export default function AdminPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsDeployModalOpen(true)}
-                  className="bg-[#c81d25] hover:bg-[#a5151c] text-white text-xs font-bold px-5 py-3 rounded-xl transition tracking-wider uppercase shadow-lg shadow-[#c81d25]/30 flex items-center gap-2"
+                  className="bg-[#c81d25] hover:bg-[#a5151c] text-white text-xs font-bold px-5 py-3 rounded-xl transition tracking-wider uppercase shadow-lg shadow-[#c81d25]/30 flex items-center gap-2 cursor-pointer"
                 >
                   <span className="text-base leading-none">+</span> Deploy New Drop
                 </button>
                 <button
-                  onClick={handleLogoutAdmin}
-                  className="bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl border border-white/10 transition"
-                  title="Lock Admin Console"
+                  onClick={() => navigate('/')}
+                  className="bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white text-xs font-semibold px-4 py-3 rounded-xl border border-white/10 transition cursor-pointer"
+                  title="Return to Storefront"
                 >
-                  🔒 Lock Console
+                  Storefront
                 </button>
               </div>
             </div>

@@ -8,6 +8,7 @@ export const USERS = [
     id: 'user-marcus',
     name: 'Marcus Vance',
     email: 'collector@devshop.io',
+    role: 'admin',
     passwordHash: DEFAULT_HASH,
     tier: 'VAULT TIER VIP MEMBER',
     joined: 'Nov 2022',
@@ -87,16 +88,18 @@ export const findUserById = (id) => {
   return USERS.find((u) => u.id === id) || null
 }
 
-export const createUser = async ({ name, email, password, avatar, tier }) => {
+export const createUser = async ({ name, email, password, avatar, tier, role }) => {
   const normalized = email.trim().toLowerCase()
   const passwordHash = await bcrypt.hash(password, 10)
+  const isDefaultAdmin = normalized === 'collector@devshop.io' || normalized === 'admin@devshop.io'
 
   const newUser = {
     id: `user-${Date.now()}`,
     name: name && name.trim() ? name.trim() : email.split('@')[0],
     email: normalized,
     passwordHash,
-    tier: tier || 'VAULT ROOKIE MEMBER',
+    role: role || (isDefaultAdmin ? 'admin' : 'member'),
+    tier: tier || (isDefaultAdmin ? 'VAULT TIER VIP MEMBER' : 'VAULT ROOKIE MEMBER'),
     joined: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     avatar: avatar || null,
     phone: '',

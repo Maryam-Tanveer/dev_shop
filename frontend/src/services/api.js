@@ -516,37 +516,31 @@ export const api = {
   },
 
   /**
-   * Admin: Create / deploy a new streetwear drop
+   * Admin: Create / deploy a new streetwear drop (Requires JWT admin authentication)
    */
-  async createProduct(productData, adminKey) {
-    const key = adminKey || (typeof window !== 'undefined' ? localStorage.getItem('devshop_admin_key') : null) || 'DEV_VAULT_ADMIN_2026'
+  async createProduct(productData) {
     return request('/products', {
       method: 'POST',
-      headers: { 'x-admin-key': key },
       body: JSON.stringify(productData),
     })
   },
 
   /**
-   * Admin: Update drop stock status, stock count, price
+   * Admin: Update drop stock status, stock count, price (Requires JWT admin authentication)
    */
-  async updateProduct(id, updates, adminKey) {
-    const key = adminKey || (typeof window !== 'undefined' ? localStorage.getItem('devshop_admin_key') : null) || 'DEV_VAULT_ADMIN_2026'
+  async updateProduct(id, updates) {
     return request(`/products/${encodeURIComponent(id)}`, {
       method: 'PATCH',
-      headers: { 'x-admin-key': key },
       body: JSON.stringify(updates),
     })
   },
 
   /**
-   * Admin: Delete / archive drop from vault
+   * Admin: Delete / archive drop from vault (Requires JWT admin authentication)
    */
-  async deleteProduct(id, adminKey) {
-    const key = adminKey || (typeof window !== 'undefined' ? localStorage.getItem('devshop_admin_key') : null) || 'DEV_VAULT_ADMIN_2026'
+  async deleteProduct(id) {
     return request(`/products/${encodeURIComponent(id)}`, {
       method: 'DELETE',
-      headers: { 'x-admin-key': key },
     })
   },
 }
