@@ -1,9 +1,17 @@
 import jwt from 'jsonwebtoken'
+import dotenv from 'dotenv'
 import { findUserById, sanitizeUser } from '../data/users.js'
 import User from '../models/User.js'
 import { getDBStatus } from '../config/db.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'devshop_super_secret_jwt_vault_key_2026'
+dotenv.config()
+
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET || !JWT_SECRET.trim()) {
+  throw new Error('[SECURITY FATAL] JWT_SECRET environment variable is missing. Refusing to start server with fallback secrets.')
+}
+
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 /**

@@ -21,6 +21,10 @@ import userRoutes from './routes/userRoutes.js'
 
 dotenv.config()
 
+if (!process.env.JWT_SECRET || !process.env.JWT_SECRET.trim()) {
+  throw new Error('[SECURITY FATAL] Missing required environment variable: JWT_SECRET must be set. Server startup aborted.')
+}
+
 const app = express()
 const PORT = process.env.PORT || 5000
 const NODE_ENV = process.env.NODE_ENV || 'development'
