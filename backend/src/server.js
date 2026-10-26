@@ -40,19 +40,40 @@ app.use(
 )
 
 // 2. CORS Security Configuration
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-  : ['http://localhost:5173', 'http://127.0.0.1:5173']
+const defaultOrigins = [
+  'https://dev-shop-bay.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+]
+
+const configuredOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
+  : []
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...configuredOrigins]))
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl) or if in allowed list
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-        callback(null, true)
-      } else {
-        callback(null, true) // Allow during local dev
+      // Allow requests with no origin (such as mobile apps, Postman, curl, or server-to-server calls)
+      if (!origin) {
+        return callback(null, true)
       }
+
+      // Check if origin is explicitly in allowed list or localhost in non-production
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        (process.env.NODE_ENV !== 'production' && /^https?:\/\/localhost(:\d+)?$/.test(origin))
+
+      if (isAllowed) {
+        return callback(null, true)
+      }
+
+      // Strictly reject unauthorized origins
+      const corsError = new AppError(`CORS blocked: Origin '${origin}' is not authorized.`, 403)
+      return callback(corsError, false)
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
