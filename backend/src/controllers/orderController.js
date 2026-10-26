@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 import { getDBStatus } from '../config/db.js'
 import { sendOrderReceiptEmail } from '../services/emailService.js'
+import { getAuthoritativeProduct } from './cartController.js'
 
 export const getOrders = asyncHandler(async (req, res) => {
   const dbStatus = getDBStatus()
@@ -59,20 +60,55 @@ export const getOrderById = asyncHandler(async (req, res, next) => {
   })
 })
 
-export const createOrder = asyncHandler(async (req, res) => {
+export const createOrder = asyncHandler(async (req, res, next) => {
   const { email, items, shippingAddress, shippingMethod, paymentMethod } = req.body
 
-  const sanitizedItems = (items || []).map((it) => ({
-    productId: String(it.productId || it.id || 'deal-1'),
-    title: it.title || 'Drop Item',
-    price: Number(it.price) || 0,
-    quantity: Math.max(1, Number(it.quantity) || 1),
-    size: it.size || 'Standard',
-    colorway: it.colorway || 'Original',
-    image: it.image || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=400',
-  }))
+  if (!items || !items.length) {
+    return next(new AppError('Order must contain at least one item', 400))
+  }
 
-  const subtotal = sanitizedItems.reduce((acc, item) => acc + (Number(item.price) || 0) * (item.quantity || 1), 0)
+  const sanitizedItems = []
+
+  for (const it of items) {
+    const productId = String(it.productId || it.id || '').trim()
+    if (!productId) {
+      return next(new AppError('Each order item must specify a valid productId', 400))
+    }
+
+    // Authoritative product lookup from database/server catalog
+    const serverProduct = await getAuthoritativeProduct(productId)
+    if (!serverProduct) {
+      return next(new AppError(`Product '${productId}' not found in catalog`, 400))
+    }
+
+    const quantity = Math.max(1, parseInt(it.quantity, 10) || 1)
+    const size = it.size || 'Standard'
+    const colorway = it.colorway || 'Default'
+
+    let itemImage = serverProduct.image
+    if (colorway && Array.isArray(serverProduct.colorways)) {
+      const matched = serverProduct.colorways.find(
+        (c) => c.name?.toLowerCase() === colorway.toLowerCase()
+      )
+      if (matched?.image) {
+        itemImage = matched.image
+      }
+    }
+
+    sanitizedItems.push({
+      productId: serverProduct.id,
+      title: serverProduct.title,
+      price: Number(serverProduct.price), // Authoritative price from server/DB - client price ignored!
+      quantity,
+      size,
+      colorway,
+      image: itemImage || it.image || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=400',
+    })
+  }
+
+  const subtotal = Number(
+    sanitizedItems.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)
+  )
   const shippingCost = shippingMethod === 'priority' ? 25.0 : 0.0
   const tax = Number((subtotal * 0.08).toFixed(2))
   const totalAmount = Number((subtotal + shippingCost + tax).toFixed(2))

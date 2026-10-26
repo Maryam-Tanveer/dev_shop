@@ -8,11 +8,11 @@ export const createOrderSchema = {
       .items(
         Joi.object({
           productId: Joi.string().required(),
-          title: Joi.string().required(),
-          price: Joi.number().min(0).required(),
           quantity: Joi.number().integer().min(1).default(1),
           size: Joi.string().allow('', null).default('Standard'),
           colorway: Joi.string().allow('', null).default('Default'),
+          title: Joi.string().allow('', null).optional(),
+          price: Joi.number().min(0).optional(),
           image: Joi.string().allow('', null).default(''),
         })
       )
