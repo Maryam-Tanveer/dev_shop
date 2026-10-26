@@ -6,7 +6,18 @@ import { getDBStatus } from '../config/db.js'
 import { sendOrderReceiptEmail } from '../services/emailService.js'
 import { getAuthoritativeProduct } from './cartController.js'
 
+/**
+ * GET /api/orders (Admin Only)
+ * Fetch all platform orders across all users
+ */
 export const getOrders = asyncHandler(async (req, res) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied: Admin privileges required to view all orders.',
+    })
+  }
+
   const dbStatus = getDBStatus()
   if (dbStatus.connected) {
     try {
@@ -28,30 +39,103 @@ export const getOrders = asyncHandler(async (req, res) => {
   })
 })
 
-export const getOrderById = asyncHandler(async (req, res, next) => {
-  const { id } = req.params
+/**
+ * GET /api/orders/my-orders (Authenticated User)
+ * Fetch ONLY the logged in user's personal orders
+ */
+export const getMyOrders = asyncHandler(async (req, res) => {
+  const userId = req.user?.id || req.user?._id
+  const userEmail = req.user?.email?.toLowerCase()
 
   const dbStatus = getDBStatus()
   if (dbStatus.connected) {
     try {
-      const order = await Order.findOne({
-        $or: [{ orderNumber: id }, { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }],
-      })
-      if (order) {
-        return res.json({
-          success: true,
-          data: order,
-        })
+      const query = {
+        $or: [
+          ...(userId ? [{ user: userId }] : []),
+          ...(userEmail ? [{ userEmail: userEmail }] : []),
+        ],
       }
+      const orders = await Order.find(query).sort({ createdAt: -1 })
+      return res.json({
+        success: true,
+        count: orders.length,
+        data: orders,
+      })
     } catch {
       // Fallback to in-memory check
     }
   }
 
-  const order = RECENT_DROP_ORDERS.find((o) => o.id === id || o.orderNumber === id)
+  const userOrders = RECENT_DROP_ORDERS.filter(
+    (o) =>
+      (userId && String(o.user) === String(userId)) ||
+      (userEmail && o.userEmail?.toLowerCase() === userEmail)
+  )
+
+  res.json({
+    success: true,
+    count: userOrders.length,
+    data: userOrders,
+  })
+})
+
+/**
+ * GET /api/orders/:id (Authenticated User: Owner or Admin)
+ * Fetch a specific order only if caller is the owner or an admin
+ */
+export const getOrderById = asyncHandler(async (req, res, next) => {
+  const { id } = req.params
+  const userId = req.user?.id || req.user?._id
+  const userEmail = req.user?.email?.toLowerCase()
+  const isAdmin = req.user?.role === 'admin'
+
+  const cleanNum = id.startsWith('#') ? id.slice(1) : id
+  const hashedNum = `#${cleanNum}`
+
+  let order = null
+  const dbStatus = getDBStatus()
+  if (dbStatus.connected) {
+    try {
+      order = await Order.findOne({
+        $or: [
+          { orderNumber: cleanNum },
+          { orderNumber: hashedNum },
+          { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
+        ],
+      })
+    } catch {
+      // Fallback to in-memory check
+    }
+  }
+
+  if (!order) {
+    order = RECENT_DROP_ORDERS.find(
+      (o) =>
+        o.id === cleanNum ||
+        o.id === hashedNum ||
+        o.orderNumber === cleanNum ||
+        o.orderNumber === hashedNum
+    )
+  }
 
   if (!order) {
     return next(new AppError(`Order '${id}' not found`, 404))
+  }
+
+  // Security Verification: Only the order owner or an admin can access this order
+  const orderUserId = order.user?._id ? order.user._id.toString() : order.user ? order.user.toString() : null
+  const orderEmail = order.userEmail ? order.userEmail.toLowerCase() : null
+
+  const isOwner =
+    (userId && orderUserId && String(orderUserId) === String(userId)) ||
+    (userEmail && orderEmail && orderEmail === userEmail)
+
+  if (!isAdmin && !isOwner) {
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied: You are not authorized to view this order.',
+    })
   }
 
   res.json({

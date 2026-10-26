@@ -365,12 +365,26 @@ export const api = {
    */
   async getOrders() {
     try {
-      const res = await request('/orders')
+      const res = await request('/orders/my-orders')
       return res.data || res
     } catch (err) {
       console.warn('[API Fallback] Falling back to local orders:', err.message)
       return RECENT_DROP_ORDERS
     }
+  },
+
+  /**
+   * Fetch all system orders (Administrator only)
+   */
+  async getAllOrders() {
+    return request('/orders')
+  },
+
+  /**
+   * Fetch specific order details by ID
+   */
+  async getOrderById(id) {
+    return request(`/orders/${id}`)
   },
 
   /**

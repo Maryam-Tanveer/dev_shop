@@ -149,3 +149,25 @@ export const requireAdmin = async (req, res, next) => {
     })
   }
 }
+
+/**
+ * Optional authentication middleware:
+ * If Bearer token is provided and valid, attaches req.user.
+ * If no token or invalid token, proceeds without error (req.user remains undefined).
+ */
+export const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1]
+      const decoded = jwt.verify(token, JWT_SECRET)
+      const user = await resolveUserById(decoded.id)
+      if (user) {
+        req.user = user
+      }
+    }
+  } catch {
+    // Proceed as unauthenticated guest
+  }
+  next()
+}
