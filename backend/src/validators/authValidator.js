@@ -36,7 +36,13 @@ export const loginSchema = {
 
 export const googleAuthSchema = {
   body: Joi.object({
-    email: Joi.string().trim().email().required(),
-    name: Joi.string().trim().default('Vault Member'),
-  }),
+    idToken: Joi.string().trim().optional(),
+    token: Joi.string().trim().optional(),
+    credential: Joi.string().trim().optional(),
+  })
+    .or('idToken', 'token', 'credential')
+    .messages({
+      'object.missing': 'Google ID token (idToken, token, or credential) is required for verification',
+    }),
 }
+

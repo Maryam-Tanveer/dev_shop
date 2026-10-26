@@ -83,12 +83,13 @@ export const api = {
   },
 
   /**
-   * Google sign in / OAuth authentication
+   * Google sign in / OAuth authentication (requires verified Google idToken)
    */
-  async googleAuth({ email, name, avatar }) {
+  async googleAuth(payload) {
+    const body = typeof payload === 'string' ? { idToken: payload } : payload
     return request('/auth/google', {
       method: 'POST',
-      body: JSON.stringify({ email, name, avatar }),
+      body: JSON.stringify(body),
     })
   },
   /**

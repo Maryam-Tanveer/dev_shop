@@ -135,11 +135,23 @@ export function AuthProvider({ children }) {
   }
 
   /**
-   * Secure Google Auth via backend JWT
+   * Secure Google Auth via verified Google ID token
    */
-  const loginWithGoogle = async (email = 'member@google.com', name = 'Vault Member') => {
+  const loginWithGoogle = async (credentialOrToken) => {
     try {
-      const res = await api.googleAuth({ email, name })
+      if (!credentialOrToken) {
+        return {
+          success: false,
+          error: 'Google Sign-In requires a verified Google ID token credential.',
+        }
+      }
+      const payload = typeof credentialOrToken === 'string'
+        ? { idToken: credentialOrToken }
+        : credentialOrToken.idToken
+        ? credentialOrToken
+        : { idToken: credentialOrToken.credential || credentialOrToken.token || '' }
+
+      const res = await api.googleAuth(payload)
       if (res.success && res.token) {
         setToken(res.token)
         setCurrentUser(res.user)

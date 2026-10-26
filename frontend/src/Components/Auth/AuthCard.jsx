@@ -121,20 +121,35 @@ export default function AuthCard({
   }
 
   const handleGoogleAuth = async () => {
-    setIsSubmitting(true)
-    const res = await auth.loginWithGoogle(
-      activeTab === 'create' ? 'newcollector@gmail.com' : 'marcus@gmail.com',
-      activeTab === 'create' ? 'Google Collector' : 'Marcus Google'
-    )
-    setIsSubmitting(false)
-    if (res.success) {
-      if (activeTab === 'create' && onSignUpSuccess) {
-        onSignUpSuccess(res.user)
-      } else if (onLoginSuccess) {
-        onLoginSuccess(res.user)
-      }
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!googleClientId) {
+      setErrorMessage(
+        'Google Sign-In requires configuring VITE_GOOGLE_CLIENT_ID and GOOGLE_CLIENT_ID in your environment variables. Fake logins without verified Google tokens are permanently disabled for security.'
+      )
+      return
+    }
+
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (response) => {
+          setIsSubmitting(true)
+          const res = await auth.loginWithGoogle(response.credential)
+          setIsSubmitting(false)
+          if (res.success) {
+            if (activeTab === 'create' && onSignUpSuccess) {
+              onSignUpSuccess(res.user)
+            } else if (onLoginSuccess) {
+              onLoginSuccess(res.user)
+            }
+          } else {
+            setErrorMessage(res.error || 'Google authentication failed.')
+          }
+        },
+      })
+      window.google.accounts.id.prompt()
     } else {
-      setErrorMessage(res.error || 'Google authentication failed.')
+      setErrorMessage('Google Sign-In service is not initialized. Please sign in with email & password.')
     }
   }
 
