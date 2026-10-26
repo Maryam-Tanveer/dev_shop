@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../../Components/Navbar'
 import Footer from '../../Components/Footer'
@@ -10,6 +10,7 @@ import OrderShippingDestination from '../../Components/OrderConfirmation/OrderSh
 import OrderSummarySidebar from '../../Components/OrderConfirmation/OrderSummarySidebar'
 import OrderHelpConcierge from '../../Components/OrderConfirmation/OrderHelpConcierge'
 import OrderTrackingModal from '../../Components/OrderTrackingModal'
+import { api } from '../../services/api'
 
 export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
@@ -19,13 +20,33 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
   const [toast, setToast] = useState(null)
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false)
 
-  const activeOrder = location.state?.order || {
-    orderNumber: 'DEV-8492019',
-    userEmail: 'collector@devshop.io',
-    shippingAddress: { firstName: 'Collector', lastName: 'Member', city: 'New York', state: 'NY' },
-    carrier: 'DHL Express Air Priority',
-    status: 'In Transit',
-  }
+  const [activeOrder, setActiveOrder] = useState(
+    location.state?.order || {
+      orderNumber: 'DEV-8492019',
+      userEmail: 'collector@devshop.io',
+      shippingAddress: { firstName: 'Collector', lastName: 'Member', city: 'New York', state: 'NY' },
+      carrier: 'DHL Express Air Priority',
+      status: 'Confirmed',
+    }
+  )
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const sessionId = params.get('session_id')
+    if (sessionId) {
+      api
+        .verifyPaymentSession(sessionId)
+        .then((res) => {
+          if (res.success && res.order) {
+            setActiveOrder(res.order)
+            showToast('Stripe payment confirmed! Receipt dispatched.')
+          }
+        })
+        .catch((err) => {
+          console.warn('[Stripe session verify]:', err.message)
+        })
+    }
+  }, [location.search])
 
   const showToast = (message) => {
     setToast(message)

@@ -99,63 +99,76 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     }
   }
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (paymentDetails = {}) => {
     if (items.length === 0) {
       showToast('Your bag is empty! Add products before placing an order.')
       return
     }
 
-    showToast('Securing allocation & dispatching email invoice...')
+    const resolvedAddress = shippingAddress.streetAddress || shippingAddress.address || 'Vault Delivery Hub'
+    const resolvedCity = shippingAddress.city || 'New York'
+    const resolvedZip = shippingAddress.postalCode || shippingAddress.zipCode || '10012'
 
-    try {
-      const resolvedAddress = shippingAddress.streetAddress || shippingAddress.address || 'Vault Delivery Hub'
-      const resolvedCity = shippingAddress.city || 'New York'
-      const resolvedZip = shippingAddress.postalCode || shippingAddress.zipCode || '10012'
+    const checkoutPayload = {
+      email: contactInfo.email || currentUser?.email || 'collector@devshop.io',
+      items: items.map((it) => ({
+        productId: String(it.productId || it.id || 'deal-1'),
+        quantity: it.quantity || 1,
+        size: it.size || 'Standard',
+        colorway: it.colorway || it.color || 'Default',
+      })),
+      shippingAddress: {
+        firstName: shippingAddress.firstName || currentUser?.name?.split(' ')[0] || 'Collector',
+        lastName: shippingAddress.lastName || currentUser?.name?.split(' ')[1] || 'Member',
+        address: resolvedAddress,
+        apartment: shippingAddress.apartment || '',
+        city: resolvedCity,
+        state: shippingAddress.state || 'NY',
+        zipCode: resolvedZip,
+        country: shippingAddress.country || 'US',
+      },
+      shippingMethod,
+    }
 
-      const orderPayload = {
-        email: contactInfo.email || currentUser?.email || 'collector@devshop.io',
-        items: items.map((it) => ({
-          productId: String(it.id || it.productId || 'deal-1'),
-          title: it.title || it.name || 'Drop Silhouette',
-          price: Number(it.price || 0),
-          quantity: it.quantity || 1,
-          size: it.size || 'M',
-          colorway: it.colorway || it.color || 'Default',
-          image: it.image || it.thumbnails?.[0]?.image || '',
-        })),
-        shippingAddress: {
-          firstName: shippingAddress.firstName || currentUser?.name?.split(' ')[0] || 'Collector',
-          lastName: shippingAddress.lastName || currentUser?.name?.split(' ')[1] || 'Member',
-          address: resolvedAddress,
-          apartment: shippingAddress.apartment || '',
-          city: resolvedCity,
-          state: shippingAddress.state || 'NY',
-          zipCode: resolvedZip,
-          country: shippingAddress.country || 'US',
-        },
-        shippingMethod,
-        paymentMethod: 'credit-card',
-      }
+    const isCardPayment =
+      paymentDetails?.paymentType === 'stripe' ||
+      paymentDetails?.paymentType === 'card' ||
+      paymentDetails?.paymentType === 'digital' ||
+      !paymentDetails?.paymentType
 
-      let createdOrder = null
+    if (isCardPayment) {
+      showToast('Connecting to Stripe 256-bit secure checkout...')
       try {
-        const res = await api.createOrder(orderPayload)
-        createdOrder = res.data
-        showToast('Invoice receipt emailed! Redirecting to confirmation...')
-      } catch (e) {
-        console.warn('[Order API fallback]:', e.message)
+        const stripeRes = await api.createCheckoutSession(checkoutPayload)
+        if (stripeRes.success && stripeRes.url) {
+          clearCart()
+          window.location.href = stripeRes.url
+          return
+        }
+      } catch (stripeErr) {
+        console.warn('[Stripe Checkout Session fallback]:', stripeErr.message)
       }
+    }
 
+    // COD or Offline Fallback
+    showToast('Placing order...')
+    try {
+      const res = await api.createOrder({
+        ...checkoutPayload,
+        paymentMethod: paymentDetails?.paymentType === 'cod' ? 'cod' : 'stripe-card',
+      })
+      const createdOrder = res.data
       clearCart()
       setTimeout(() => {
         if (onNavigate) {
           onNavigate('ORDER_CONFIRMATION')
         } else {
-          navigate('/order-confirmation', { state: { order: createdOrder || orderPayload } })
+          navigate('/order-confirmation', { state: { order: createdOrder || checkoutPayload } })
         }
       }, 600)
     } catch (err) {
       console.error('Checkout error:', err)
+      showToast('Order placement failed. Please try again.')
     }
   }
 

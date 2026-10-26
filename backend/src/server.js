@@ -18,6 +18,7 @@ import authRoutes from './routes/authRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
 import wishlistRoutes from './routes/wishlistRoutes.js'
 import userRoutes from './routes/userRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
 
 dotenv.config()
 
@@ -81,8 +82,15 @@ app.use(
   })
 )
 
-// 3. Body parsers with payload size limits to protect against DoS
-app.use(express.json({ limit: '10kb' }))
+// 3. Body parsers with payload size limits and rawBody preservation for Stripe webhook
+app.use(
+  express.json({
+    limit: '10kb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf
+    },
+  })
+)
 app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 
 // 4. Rate Limiting for all /api endpoints
@@ -122,6 +130,7 @@ app.use('/api/collections', collectionRoutes)
 app.use('/api/blogs', blogRoutes)
 app.use('/api/faqs', faqRoutes)
 app.use('/api/orders', orderRoutes)
+app.use('/api/payments', paymentRoutes)
 app.use('/api/wishlist', wishlistRoutes)
 app.use('/api/user', userRoutes)
 

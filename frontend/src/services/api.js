@@ -399,6 +399,23 @@ export const api = {
   },
 
   /**
+   * Create Stripe Checkout Session (PCI-DSS compliant hosted checkout)
+   */
+  async createCheckoutSession(checkoutData) {
+    return request('/payments/create-checkout-session', {
+      method: 'POST',
+      body: JSON.stringify(checkoutData),
+    })
+  },
+
+  /**
+   * Verify completed Stripe checkout session
+   */
+  async verifyPaymentSession(sessionId) {
+    return request(`/payments/verify-session/${sessionId}`)
+  },
+
+  /**
    * Subscribe to VIP drop alerts (triggers notification email)
    */
   async subscribeDropAlert(email, dropTitle) {

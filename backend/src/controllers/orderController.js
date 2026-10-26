@@ -199,6 +199,10 @@ export const createOrder = asyncHandler(async (req, res, next) => {
 
   const orderNumber = `DEV-${Math.floor(100000 + Math.random() * 900000)}`
 
+  const isCod = paymentMethod === 'cod' || paymentMethod === 'cash-on-delivery'
+  const initialStatus = isCod ? 'Confirmed' : 'Pending'
+  const initialPaymentStatus = isCod ? 'unpaid' : 'unpaid'
+
   const newOrderData = {
     orderNumber,
     user: req.user?._id || req.user?.id || null,
@@ -206,12 +210,13 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     items: sanitizedItems,
     shippingAddress,
     shippingMethod: (shippingMethod || 'standard').toLowerCase(),
-    paymentMethod: paymentMethod || 'credit-card',
+    paymentMethod: paymentMethod || 'stripe-card',
     subtotal: Number(subtotal.toFixed(2)),
     shippingCost,
     tax,
     totalAmount,
-    status: 'Confirmed',
+    status: initialStatus,
+    paymentStatus: initialPaymentStatus,
     createdAt: new Date().toISOString(),
   }
 
@@ -230,16 +235,18 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     RECENT_DROP_ORDERS.unshift(newOrderData)
   }
 
-  // Trigger Nodemailer receipt dispatch asynchronously (non-blocking)
-  sendOrderReceiptEmail(finalOrder)
-    .then((emailResult) => {
-      if (emailResult.previewUrl) {
-        console.log(`[RECEIPT PREVIEW] Customer receipt link: ${emailResult.previewUrl}`)
-      }
-    })
-    .catch((err) => {
-      console.warn('[RECEIPT EMAIL NOTICE] Background email dispatch:', err.message)
-    })
+  // Only dispatch receipt if payment is confirmed; for card orders, webhook sends receipt once payment succeeds
+  if (finalOrder.status === 'Confirmed' || finalOrder.paymentStatus === 'paid') {
+    sendOrderReceiptEmail(finalOrder)
+      .then((emailResult) => {
+        if (emailResult.previewUrl) {
+          console.log(`[RECEIPT PREVIEW] Customer receipt link: ${emailResult.previewUrl}`)
+        }
+      })
+      .catch((err) => {
+        console.warn('[RECEIPT EMAIL NOTICE] Background email dispatch:', err.message)
+      })
+  }
 
   res.status(201).json({
     success: true,
