@@ -33,24 +33,23 @@ export function AuthProvider({ children }) {
     } catch {}
   }, [])
 
-  // Verify JWT session with backend on mount
+  // Verify JWT session with backend on mount (via cookie or token)
   useEffect(() => {
     let isMounted = true
-    if (!token) {
-      setLoading(false)
-      return
-    }
 
     api
       .getMe(token)
       .then((res) => {
         if (isMounted && res.success && res.user) {
           setCurrentUser(res.user)
+          if (res.token) setToken(res.token)
           localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(res.user))
         }
       })
       .catch((err) => {
-        console.warn('[JWT Session Expired or Invalid]:', err.message)
+        if (token) {
+          console.warn('[JWT Session Expired or Invalid]:', err.message)
+        }
         if (isMounted) {
           setToken(null)
           setCurrentUser(null)
@@ -112,10 +111,10 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Please provide a valid email format.' }
     }
 
-    if (!password || password.length < 6) {
+    if (!password || password.length < 8) {
       return {
         success: false,
-        error: 'Password must be at least 6 characters long.',
+        error: 'Password must be at least 8 characters long.',
       }
     }
 
@@ -166,6 +165,8 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
+    // Revoke token on backend and clear httpOnly cookie
+    api.logout().catch(() => {})
     setToken(null)
     setCurrentUser(null)
     try {

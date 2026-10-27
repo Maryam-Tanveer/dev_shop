@@ -1,5 +1,5 @@
 import express from 'express'
-import { login, register, getMe, googleAuth } from '../controllers/authController.js'
+import { login, register, getMe, googleAuth, logout } from '../controllers/authController.js'
 import { requireAuth } from '../middleware/authMiddleware.js'
 import { validate } from '../middleware/validate.js'
 import { authLimiter } from '../middleware/security.js'
@@ -18,6 +18,7 @@ router.post('/login', validate(loginSchema), login)
 router.post('/register', validate(registerSchema), register)
 router.post('/signup', validate(registerSchema), register)
 router.post('/google', validate(googleAuthSchema), googleAuth)
+router.post('/logout', logout)
 router.get('/me', requireAuth, getMe)
 
 export default router

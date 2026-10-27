@@ -19,6 +19,7 @@ import cartRoutes from './routes/cartRoutes.js'
 import wishlistRoutes from './routes/wishlistRoutes.js'
 import userRoutes from './routes/userRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
+import cookieParser from 'cookie-parser'
 
 dotenv.config()
 
@@ -28,7 +29,7 @@ if (!process.env.JWT_SECRET || !process.env.JWT_SECRET.trim()) {
 
 const app = express()
 const PORT = process.env.PORT || 5000
-const NODE_ENV = process.env.NODE_ENV || 'development'
+const NODE_ENV = process.env.NODE_ENV || 'production'
 
 // Connect to MongoDB Database (with seamless offline fallback)
 connectDB()
@@ -92,6 +93,7 @@ app.use(
   })
 )
 app.use(express.urlencoded({ extended: true, limit: '10kb' }))
+app.use(cookieParser())
 
 // 4. Rate Limiting for all /api endpoints
 app.use('/api', apiLimiter)

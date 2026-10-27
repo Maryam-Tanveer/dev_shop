@@ -62,20 +62,40 @@ const resolveUserById = async (id) => {
   return null
 }
 
+import { isTokenRevoked } from '../services/tokenBlacklist.js'
+
 /**
- * Middleware to require and verify valid JWT Bearer token
+ * Universal helper to extract JWT token from httpOnly cookie or Authorization Bearer header
+ */
+export const extractToken = (req) => {
+  if (req.cookies?.token) return req.cookies.token
+  const authHeader = req.headers.authorization
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1]
+  }
+  return null
+}
+
+/**
+ * Middleware to require and verify valid JWT Bearer or httpOnly cookie token
  */
 export const requireAuth = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = extractToken(req)
+    if (!token) {
       return res.status(401).json({
         success: false,
         error: 'Authentication token required. Please sign in.',
       })
     }
 
-    const token = authHeader.split(' ')[1]
+    if (await isTokenRevoked(token)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Session has been revoked or logged out. Please sign in again.',
+      })
+    }
+
     const decoded = jwt.verify(token, JWT_SECRET)
 
     const user = await resolveUserById(decoded.id)
@@ -87,6 +107,7 @@ export const requireAuth = async (req, res, next) => {
     }
 
     req.user = user
+    req.token = token
     next()
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
@@ -108,15 +129,21 @@ export const requireAuth = async (req, res, next) => {
  */
 export const requireAdmin = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = extractToken(req)
+    if (!token) {
       return res.status(401).json({
         success: false,
         error: 'Administrator authentication required. Please sign in with an admin account.',
       })
     }
 
-    const token = authHeader.split(' ')[1]
+    if (await isTokenRevoked(token)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Session has been revoked or logged out. Please sign in again.',
+      })
+    }
+
     const decoded = jwt.verify(token, JWT_SECRET)
 
     const user = await resolveUserById(decoded.id)
@@ -135,6 +162,7 @@ export const requireAdmin = async (req, res, next) => {
     }
 
     req.user = user
+    req.token = token
     next()
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
@@ -152,18 +180,18 @@ export const requireAdmin = async (req, res, next) => {
 
 /**
  * Optional authentication middleware:
- * If Bearer token is provided and valid, attaches req.user.
+ * If token is provided in cookie or header, verifies and attaches req.user.
  * If no token or invalid token, proceeds without error (req.user remains undefined).
  */
 export const optionalAuth = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1]
+    const token = extractToken(req)
+    if (token && !(await isTokenRevoked(token))) {
       const decoded = jwt.verify(token, JWT_SECRET)
       const user = await resolveUserById(decoded.id)
       if (user) {
         req.user = user
+        req.token = token
       }
     }
   } catch {

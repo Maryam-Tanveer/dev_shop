@@ -94,8 +94,8 @@ export default function AuthCard({
       return
     }
 
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.')
+    if (password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long.')
       setIsSubmitting(false)
       return
     }
@@ -153,11 +153,6 @@ export default function AuthCard({
     }
   }
 
-  const fillDemoCredentials = () => {
-    setEmail('collector@devshop.io')
-    setPassword('password123')
-    setErrorMessage('')
-  }
 
   return (
     <div className="w-full max-w-[460px] bg-white rounded-[32px] border border-neutral-200/90 shadow-xl p-8 sm:p-10 mx-auto relative z-10 transition-all duration-300">
@@ -293,7 +288,7 @@ export default function AuthCard({
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                minLength={6}
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -404,13 +399,6 @@ export default function AuthCard({
               <span className="text-neutral-600 font-medium">Remember this device</span>
             </label>
 
-            <button
-              type="button"
-              onClick={fillDemoCredentials}
-              className="text-xs font-bold text-[#c81d25] hover:underline"
-            >
-              Fill Demo VIP
-            </button>
           </div>
 
           {/* Sign In Button */}
@@ -424,20 +412,6 @@ export default function AuthCard({
           </button>
         </form>
       )}
-
-      {/* Demo Credentials Helper Pill */}
-      <div className="mt-4 p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-start gap-2.5 text-[11px] text-neutral-600">
-        <Info className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <span className="font-bold text-neutral-800">Seed VIP Login: </span>
-          <span className="font-mono text-neutral-600">collector@devshop.io</span>
-          <span className="mx-1">•</span>
-          <span className="font-mono text-neutral-600">password123</span>
-          <p className="text-[10px] text-neutral-400 mt-0.5">
-            Or create a real custom account above with your own name & email.
-          </p>
-        </div>
-      </div>
 
       {/* Divider */}
       <div className="relative my-5 flex items-center justify-center">

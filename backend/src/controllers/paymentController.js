@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import Stripe from 'stripe'
 import Order from '../models/Order.js'
 import { getAuthoritativeProduct } from './cartController.js'
@@ -60,7 +61,7 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
   const shippingCost = shippingMethod === 'priority' ? 25.0 : 0.0
   const tax = Number((subtotal * 0.08).toFixed(2))
   const totalAmount = Number((subtotal + shippingCost + tax).toFixed(2))
-  const orderNumber = `DEV-${Math.floor(100000 + Math.random() * 900000)}`
+  const orderNumber = `DEV-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 
   // 2. Create Order with PENDING status (Order is NOT confirmed until payment succeeds)
   const newOrderData = {
@@ -87,10 +88,18 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
       const created = await Order.create(newOrderData)
       savedOrder = created.toObject ? created.toObject() : created
     } catch (e) {
+      if (process.env.NODE_ENV === 'production') {
+        return next(new AppError('Failed to record order to persistent database.', 500))
+      }
       console.warn('[Stripe Checkout Order Notice]:', e.message)
       RECENT_DROP_ORDERS.unshift(newOrderData)
     }
   } else {
+    if (process.env.NODE_ENV === 'production') {
+      return next(
+        new AppError('Database connection unavailable. Cannot initiate checkout in production without persistent database.', 503)
+      )
+    }
     RECENT_DROP_ORDERS.unshift(newOrderData)
   }
 

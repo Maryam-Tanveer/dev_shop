@@ -34,6 +34,7 @@ async function request(endpoint, options = {}) {
   }
 
   const response = await fetch(url, {
+    credentials: options.credentials || 'include',
     ...options,
     headers,
   })
@@ -91,6 +92,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     })
+  },
+
+  /**
+   * User logout: Revokes JWT session and clears cookies on backend
+   */
+  async logout() {
+    return request('/auth/logout', {
+      method: 'POST',
+    }).catch(() => ({}))
   },
   /**
    * Fetch products with optional filtering

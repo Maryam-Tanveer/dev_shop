@@ -1,17 +1,28 @@
+import crypto from 'crypto'
 import {
   findUserByEmail,
   createUser,
   comparePassword,
   sanitizeUser,
 } from '../data/users.js'
-import { generateToken } from '../middleware/authMiddleware.js'
+import { generateToken, extractToken } from '../middleware/authMiddleware.js'
 import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { getDBStatus } from '../config/db.js'
 import { OAuth2Client } from 'google-auth-library'
+import { revokeToken } from '../services/tokenBlacklist.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || undefined)
+
+export const getCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+})
+
+const INVALID_CREDENTIALS_MSG = 'Invalid email or password. Please verify your credentials and try again.'
 
 /**
  * Cryptographically verifies a Google ID Token using official google-auth-library
@@ -62,7 +73,7 @@ export const login = asyncHandler(async (req, res, next) => {
       if (user) {
         const isMatch = await user.matchPassword(password)
         if (!isMatch) {
-          return next(new AppError('Incorrect password. Please verify and try again.', 401))
+          return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
         }
         const token = generateToken(user)
         const safeUser = {
@@ -73,32 +84,49 @@ export const login = asyncHandler(async (req, res, next) => {
           avatar: user.avatar,
           tier: user.memberTier,
         }
+
+        // Set secure httpOnly cookie
+        res.cookie('token', token, getCookieOptions())
+
         return res.json({
           success: true,
           token,
           user: safeUser,
           message: 'Successfully authenticated.',
         })
+      } else {
+        // Return same error even if user does not exist (prevents email enumeration)
+        return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
       }
-    } catch {
-      // Fallback to in-memory store
+    } catch (e) {
+      // In production, refuse to fall back to RAM demo users
+      if (process.env.NODE_ENV === 'production') {
+        return next(new AppError('Database error during authentication.', 500))
+      }
     }
+  }
+
+  // Refuse in-memory fallback in production to prevent data loss and unauthorized demo accounts
+  if (process.env.NODE_ENV === 'production') {
+    return next(
+      new AppError('Database connection unavailable. In-memory demo fallback is disabled in production.', 503)
+    )
   }
 
   const user = findUserByEmail(email)
   if (!user) {
-    return next(
-      new AppError('No account found with this email. Please check your spelling or sign up.', 401)
-    )
+    return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
   }
 
   const isMatch = await comparePassword(password, user.passwordHash)
   if (!isMatch) {
-    return next(new AppError('Incorrect password. Please verify and try again.', 401))
+    return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
   }
 
   const token = generateToken(user)
   const safeUser = sanitizeUser(user)
+
+  res.cookie('token', token, getCookieOptions())
 
   res.json({
     success: true,
@@ -134,6 +162,9 @@ export const register = asyncHandler(async (req, res, next) => {
         avatar: newUser.avatar,
         tier: newUser.memberTier,
       }
+
+      res.cookie('token', token, getCookieOptions())
+
       return res.status(201).json({
         success: true,
         token,
@@ -146,7 +177,17 @@ export const register = asyncHandler(async (req, res, next) => {
           new AppError('An account with this email is already registered. Please sign in instead.', 409)
         )
       }
+      if (process.env.NODE_ENV === 'production') {
+        return next(new AppError('Database error during account registration.', 500))
+      }
     }
+  }
+
+  // Refuse in-memory fallback in production to prevent silent data loss
+  if (process.env.NODE_ENV === 'production') {
+    return next(
+      new AppError('Database connection unavailable. In-memory demo fallback is disabled in production.', 503)
+    )
   }
 
   const existingUser = findUserByEmail(email)
@@ -165,6 +206,8 @@ export const register = asyncHandler(async (req, res, next) => {
 
   const token = generateToken(newUser)
   const safeUser = sanitizeUser(newUser)
+
+  res.cookie('token', token, getCookieOptions())
 
   res.status(201).json({
     success: true,
@@ -220,7 +263,7 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
         dbUser = await User.create({
           name: name || 'Google Collector',
           email,
-          password: `google-oauth-${Date.now()}-${Math.random()}`,
+          password: `google-oauth-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`,
           avatar: avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
           memberTier: 'GOOGLE AUTH MEMBER',
           role: 'member',
@@ -236,6 +279,9 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
         avatar: dbUser.avatar,
         tier: dbUser.memberTier,
       }
+
+      res.cookie('token', token, getCookieOptions())
+
       return res.json({
         success: true,
         token,
@@ -243,7 +289,17 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
       })
     } catch (err) {
       console.warn('[GOOGLE AUTH DB NOTICE]:', err.message)
+      if (process.env.NODE_ENV === 'production') {
+        return next(new AppError('Database error during Google authentication.', 500))
+      }
     }
+  }
+
+  // Refuse in-memory fallback in production
+  if (process.env.NODE_ENV === 'production') {
+    return next(
+      new AppError('Database connection unavailable. In-memory demo fallback is disabled in production.', 503)
+    )
   }
 
   let user = findUserByEmail(email)
@@ -257,7 +313,7 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
     user = await createUser({
       name: name || 'Google Collector',
       email,
-      password: `google-oauth-${Date.now()}-${Math.random()}`,
+      password: `google-oauth-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`,
       avatar: avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
       tier: 'GOOGLE AUTH MEMBER',
       role: 'member',
@@ -267,9 +323,27 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
   const token = generateToken(user)
   const safeUser = sanitizeUser(user)
 
+  res.cookie('token', token, getCookieOptions())
+
   res.json({
     success: true,
     token,
     user: safeUser,
+  })
+})
+
+/**
+ * User Logout
+ * Revokes the current JWT token in the blacklist and clears httpOnly auth cookie
+ */
+export const logout = asyncHandler(async (req, res) => {
+  const token = extractToken(req)
+  if (token) {
+    await revokeToken(token)
+  }
+  res.clearCookie('token', getCookieOptions())
+  return res.json({
+    success: true,
+    message: 'Successfully logged out. Session has been revoked.',
   })
 })

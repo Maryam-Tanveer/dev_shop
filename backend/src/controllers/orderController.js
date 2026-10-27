@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { RECENT_DROP_ORDERS } from '../data/mockData.js'
 import Order from '../models/Order.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
@@ -197,7 +198,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
   const tax = Number((subtotal * 0.08).toFixed(2))
   const totalAmount = Number((subtotal + shippingCost + tax).toFixed(2))
 
-  const orderNumber = `DEV-${Math.floor(100000 + Math.random() * 900000)}`
+  const orderNumber = `DEV-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 
   const isCod = paymentMethod === 'cod' || paymentMethod === 'cash-on-delivery'
   const initialStatus = isCod ? 'Confirmed' : 'Pending'
@@ -228,10 +229,18 @@ export const createOrder = asyncHandler(async (req, res, next) => {
       const savedOrder = await Order.create(newOrderData)
       finalOrder = savedOrder.toObject ? savedOrder.toObject() : savedOrder
     } catch (e) {
+      if (process.env.NODE_ENV === 'production') {
+        return next(new AppError('Failed to record order to persistent database.', 500))
+      }
       console.warn('[ORDER DB NOTICE] Saved to memory fallback:', e.message)
       RECENT_DROP_ORDERS.unshift(newOrderData)
     }
   } else {
+    if (process.env.NODE_ENV === 'production') {
+      return next(
+        new AppError('Database connection unavailable. Cannot place order in production without persistent database.', 503)
+      )
+    }
     RECENT_DROP_ORDERS.unshift(newOrderData)
   }
 
