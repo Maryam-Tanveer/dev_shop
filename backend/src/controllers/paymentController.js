@@ -170,83 +170,117 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
 /**
  * POST /api/payments/webhook
  * Stripe Webhook: listens for checkout.session.completed to mark order Confirmed & Paid
+ * Strictly requires cryptographic stripe-signature and STRIPE_WEBHOOK_SECRET (No unsigned fallback)
+ * Authoritatively validates paid amount against order totalAmount before confirming
  */
 export const stripeWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature']
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
-  let event
-  const stripe = getStripe()
-
-  if (webhookSecret && sig) {
-    try {
-      const payload = req.rawBody || req.body
-      event = stripe.webhooks.constructEvent(payload, sig, webhookSecret)
-    } catch (err) {
-      console.error('[STRIPE WEBHOOK ERROR]:', err.message)
-      return res.status(400).send(`Webhook Error: ${err.message}`)
-    }
-  } else {
-    event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+  // 1. Strict Secret & Signature Check — Zero Fallback
+  if (!webhookSecret) {
+    console.error('[STRIPE WEBHOOK ERROR]: STRIPE_WEBHOOK_SECRET is not configured on server.')
+    return res.status(500).json({
+      error: 'Webhook signing secret is not configured on server.',
+    })
   }
 
-  if (event && (event.type === 'checkout.session.completed' || event.type === 'payment_intent.succeeded')) {
+  if (!sig) {
+    console.warn('[STRIPE WEBHOOK REJECTED]: Missing stripe-signature header. Unsigned requests are rejected.')
+    return res.status(400).json({
+      error: 'Missing stripe-signature header. Unsigned webhook requests are strictly rejected.',
+    })
+  }
+
+  let event
+
+  // 2. Cryptographic Signature Verification
+  try {
+    const payload = req.rawBody || req.body
+    event = Stripe.webhooks.constructEvent(payload, sig, webhookSecret)
+  } catch (err) {
+    console.error('[STRIPE WEBHOOK VERIFICATION FAILED]:', err.message)
+    return res.status(400).json({
+      error: `Webhook signature verification failed: ${err.message}`,
+    })
+  }
+
+  // 3. Process Verified Events
+  if (event.type === 'checkout.session.completed') {
     const session = event.data?.object || {}
     const orderNumber = session.metadata?.orderNumber
     const sessionId = session.id
     const paymentIntentId = session.payment_intent || session.id
 
-    console.log(`[STRIPE WEBHOOK] Payment confirmed for order ${orderNumber || sessionId}`)
+    // Confirm that payment status is actually paid
+    if (session.payment_status !== 'paid') {
+      console.warn(`[STRIPE WEBHOOK] Session ${sessionId} status is not paid (${session.payment_status}). Skipping.`)
+      return res.status(200).json({ received: true, message: 'Session payment status not paid' })
+    }
 
     const dbStatus = getDBStatus()
     let order = null
+
     if (dbStatus.connected) {
       try {
-        order = await Order.findOneAndUpdate(
-          {
-            $or: [
-              ...(orderNumber ? [{ orderNumber }] : []),
-              ...(sessionId ? [{ stripeSessionId: sessionId }] : []),
-            ],
-          },
-          {
-            status: 'Confirmed',
-            paymentStatus: 'paid',
-            stripePaymentIntentId: paymentIntentId,
-          },
-          { new: true }
-        )
+        order = await Order.findOne({
+          $or: [
+            ...(orderNumber ? [{ orderNumber }] : []),
+            ...(sessionId ? [{ stripeSessionId: sessionId }] : []),
+          ],
+        })
       } catch (err) {
-        console.error('[Stripe Webhook DB update error]:', err.message)
+        console.error('[STRIPE WEBHOOK DB ERROR]:', err.message)
       }
     }
 
     if (!order) {
-      const memOrder = RECENT_DROP_ORDERS.find(
+      order = RECENT_DROP_ORDERS.find(
         (o) => o.orderNumber === orderNumber || o.stripeSessionId === sessionId
       )
-      if (memOrder) {
-        memOrder.status = 'Confirmed'
-        memOrder.paymentStatus = 'paid'
-        memOrder.stripePaymentIntentId = paymentIntentId
-        order = memOrder
-      }
     }
 
-    // Dispatch receipt email only now that payment has succeeded
-    if (order) {
-      sendOrderReceiptEmail(order).catch((err) =>
-        console.warn('[RECEIPT EMAIL NOTICE]:', err.message)
-      )
+    if (!order) {
+      console.warn(`[STRIPE WEBHOOK] Order not found for orderNumber: ${orderNumber}, sessionId: ${sessionId}`)
+      return res.status(404).json({ error: 'Order not found for verified checkout session.' })
     }
+
+    // 4. Validate Amount: session.amount_total (cents) must match order.totalAmount (dollars)
+    const paidAmount = Number((session.amount_total / 100).toFixed(2))
+    const expectedAmount = Number(Number(order.totalAmount).toFixed(2))
+
+    if (Math.abs(paidAmount - expectedAmount) > 0.05) {
+      console.error(
+        `[STRIPE WEBHOOK FRAUD DETECTED] Amount mismatch for order ${order.orderNumber}! Expected: $${expectedAmount}, Received: $${paidAmount}`
+      )
+      return res.status(400).json({
+        error: `Payment amount mismatch: Expected $${expectedAmount}, received $${paidAmount}. Order confirmation aborted.`,
+      })
+    }
+
+    // 5. Update Order to Confirmed and Paid
+    order.status = 'Confirmed'
+    order.paymentStatus = 'paid'
+    order.stripePaymentIntentId = paymentIntentId
+    if (dbStatus.connected && order.save) {
+      await order.save()
+    }
+
+    console.log(`[STRIPE WEBHOOK] Verified signature & confirmed order ${order.orderNumber} for $${paidAmount}`)
+
+    // Dispatch receipt email
+    sendOrderReceiptEmail(order).catch((err) =>
+      console.warn('[RECEIPT EMAIL NOTICE]:', err.message)
+    )
   }
 
-  res.json({ received: true })
+  return res.json({ received: true })
 }
 
 /**
  * GET /api/payments/verify-session/:sessionId
  * Verifies session payment status with Stripe and confirms order
+ * Also validates session amount matches order totalAmount
  */
 export const verifySession = asyncHandler(async (req, res, next) => {
   const { sessionId } = req.params
@@ -277,20 +311,12 @@ export const verifySession = asyncHandler(async (req, res, next) => {
 
   if (dbStatus.connected) {
     try {
-      order = await Order.findOneAndUpdate(
-        {
-          $or: [
-            ...(orderNumber ? [{ orderNumber }] : []),
-            { stripeSessionId: sessionId },
-          ],
-        },
-        {
-          status: 'Confirmed',
-          paymentStatus: 'paid',
-          stripePaymentIntentId: session.payment_intent,
-        },
-        { new: true }
-      )
+      order = await Order.findOne({
+        $or: [
+          ...(orderNumber ? [{ orderNumber }] : []),
+          { stripeSessionId: sessionId },
+        ],
+      })
     } catch (err) {
       console.warn('[Verify Session DB update notice]:', err.message)
     }
@@ -300,21 +326,38 @@ export const verifySession = asyncHandler(async (req, res, next) => {
     order = RECENT_DROP_ORDERS.find(
       (o) => o.orderNumber === orderNumber || o.stripeSessionId === sessionId
     )
-    if (order) {
-      order.status = 'Confirmed'
-      order.paymentStatus = 'paid'
-      order.stripePaymentIntentId = session.payment_intent
-    }
   }
 
-  if (order) {
-    sendOrderReceiptEmail(order).catch(() => {})
+  if (!order) {
+    return next(new AppError('Order not found for verified session', 404))
   }
+
+  // Validate amount: session amount must match order totalAmount
+  const paidAmount = Number((session.amount_total / 100).toFixed(2))
+  const expectedAmount = Number(Number(order.totalAmount).toFixed(2))
+
+  if (Math.abs(paidAmount - expectedAmount) > 0.05) {
+    return next(
+      new AppError(
+        `Payment amount mismatch: Expected $${expectedAmount}, received $${paidAmount}. Order will not be confirmed.`,
+        400
+      )
+    )
+  }
+
+  order.status = 'Confirmed'
+  order.paymentStatus = 'paid'
+  order.stripePaymentIntentId = session.payment_intent
+  if (dbStatus.connected && order.save) {
+    await order.save()
+  }
+
+  sendOrderReceiptEmail(order).catch(() => {})
 
   res.json({
     success: true,
     paid: true,
-    orderNumber: order?.orderNumber || orderNumber,
+    orderNumber: order.orderNumber || orderNumber,
     order,
   })
 })
