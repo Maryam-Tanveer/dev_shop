@@ -122,7 +122,7 @@ export default function Navbar({
       <div className="bg-[#121212] text-neutral-300 text-[11px] font-semibold border-b border-neutral-800">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-2.5 flex items-center justify-between">
           {/* Navigation Links */}
-          <nav className="flex items-center gap-6 sm:gap-7 tracking-wider uppercase overflow-x-auto no-scrollbar">
+          <nav aria-label="Main navigation" className="flex items-center gap-6 sm:gap-7 tracking-wider uppercase overflow-x-auto no-scrollbar">
             {navLinks.map((item) => {
               const routePath = ROUTE_MAP[item] || `/${item.toLowerCase()}`
               const isActive = activeNav ? activeNav === item : (item === 'HOME' ? location.pathname === '/' : location.pathname.startsWith(routePath))
@@ -145,14 +145,14 @@ export default function Navbar({
 
           {/* Currency / Language */}
           <div className="hidden sm:flex items-center gap-4 text-neutral-400 font-medium">
-            <button className="flex items-center gap-1 hover:text-white transition">
+            <button type="button" aria-label="Select language" className="flex items-center gap-1 hover:text-white transition cursor-pointer">
               <span>English</span>
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
-            <span className="text-neutral-700">|</span>
-            <button className="flex items-center gap-1 hover:text-white transition">
+            <span className="text-neutral-700" aria-hidden="true">|</span>
+            <button type="button" aria-label="Select currency" className="flex items-center gap-1 hover:text-white transition cursor-pointer">
               <span>USD</span>
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function Navbar({
           {/* Search Bar with Autocomplete Dropdown */}
           <div ref={searchRef} className="flex-1 max-w-xl mx-auto hidden md:block relative">
             <div className="relative flex items-center">
-              <Search className="w-4 h-4 text-neutral-400 absolute left-4 pointer-events-none" />
+              <Search className="w-4 h-4 text-neutral-400 absolute left-4 pointer-events-none" aria-hidden="true" />
               <input
                 type="text"
                 value={searchQuery}
@@ -188,25 +188,28 @@ export default function Navbar({
                   if (onSearchChange) onSearchChange(e.target.value)
                   setShowSearchDropdown(true)
                 }}
+                aria-label="Search streetwear drops by title or brand"
                 placeholder='Try "Jordan 1", "Yeezy", "Snowboard", or "Panda"'
                 className="w-full bg-[#f4f4f4] hover:bg-[#eaeaea] focus:bg-white text-xs font-medium text-neutral-800 placeholder-neutral-400 pl-11 pr-8 py-2.5 rounded-full border border-transparent focus:border-neutral-300 outline-none transition"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => {
                     if (onSearchChange) onSearchChange('')
                     setShowSearchDropdown(false)
                   }}
-                  className="absolute right-3 text-neutral-400 hover:text-neutral-700"
+                  aria-label="Clear search query"
+                  className="absolute right-3 text-neutral-400 hover:text-neutral-700 cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               )}
             </div>
 
             {/* Live Search Dropdown */}
             {showSearchDropdown && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-2 z-50 overflow-hidden">
+              <div role="listbox" aria-label="Search suggestions" className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-2 z-50 overflow-hidden">
                 <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 border-b border-neutral-100">
                   Matching Drops ({searchResults.length})
                 </div>
@@ -246,17 +249,19 @@ export default function Navbar({
             <Link
               to="/wishlist"
               onClick={() => onNavClick && onNavClick('WISHLIST')}
+              aria-label={`View wishlist, ${wishlistCount} items`}
               className="p-2.5 rounded-full hover:bg-neutral-100 text-neutral-700 hover:text-[#c81d25] transition relative"
               title="Wishlist"
             >
-              <Heart className={`w-5 h-5 ${wishlistCount > 0 ? 'text-[#c81d25] fill-[#c81d25]' : ''}`} />
+              <Heart className={`w-5 h-5 ${wishlistCount > 0 ? 'text-[#c81d25] fill-[#c81d25]' : ''}`} aria-hidden="true" />
               {wishlistCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#c81d25]" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#c81d25]" aria-hidden="true" />
               )}
             </Link>
 
             {/* Cart Button Pill */}
             <button
+              type="button"
               onClick={() => {
                 if (handleOpenCart) {
                   handleOpenCart()
@@ -266,9 +271,10 @@ export default function Navbar({
                   navigate('/cart')
                 }
               }}
+              aria-label={`Open shopping cart drawer, ${cartCount} items`}
               className="bg-[#fde8e8] hover:bg-[#fad1d1] text-[#c81d25] px-4 py-2 rounded-full flex items-center gap-2.5 text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer"
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-4 h-4" aria-hidden="true" />
               <span>{cartCount} Items</span>
             </button>
 
@@ -277,6 +283,7 @@ export default function Navbar({
               <Link
                 to="/account"
                 onClick={() => onNavClick && onNavClick('ACCOUNT')}
+                aria-label={`View account profile for ${currentUser.name || 'Member'}`}
                 title={`${currentUser.name} (${currentUser.tier || 'Member'})`}
                 className="w-9 h-9 rounded-full overflow-hidden border border-neutral-300 hover:border-[#c81d25] transition cursor-pointer flex-shrink-0 flex items-center justify-center bg-gradient-to-tr from-neutral-900 to-neutral-700 text-white font-extrabold text-[11px] shadow-2xs"
               >

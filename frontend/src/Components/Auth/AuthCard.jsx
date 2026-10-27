@@ -180,11 +180,13 @@ export default function AuthCard({
       </div>
 
       {/* Tabs Pill (Sign In / Create Account) */}
-      <div className="bg-[#f4f4f4] p-1 rounded-full flex items-center mt-6 mb-5">
+      <div role="tablist" aria-label="Authentication modes" className="bg-[#f4f4f4] p-1 rounded-full flex items-center mt-6 mb-5">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'signin'}
           onClick={() => handleTabSwitch('signin')}
-          className={`flex-1 py-2 text-xs font-bold rounded-full transition ${
+          className={`flex-1 py-2 text-xs font-bold rounded-full transition cursor-pointer ${
             activeTab === 'signin'
               ? 'bg-[#c81d25] text-white shadow-xs'
               : 'text-neutral-600 hover:text-neutral-900'
@@ -194,8 +196,10 @@ export default function AuthCard({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'create'}
           onClick={() => handleTabSwitch('create')}
-          className={`flex-1 py-2 text-xs font-bold rounded-full transition ${
+          className={`flex-1 py-2 text-xs font-bold rounded-full transition cursor-pointer ${
             activeTab === 'create'
               ? 'bg-[#c81d25] text-white shadow-xs'
               : 'text-neutral-600 hover:text-neutral-900'
@@ -207,16 +211,16 @@ export default function AuthCard({
 
       {/* Alert Error Banner */}
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 text-[#c81d25] px-4 py-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 mb-4 animate-shake">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#c81d25]" />
+        <div role="alert" aria-live="assertive" className="bg-rose-50 border border-rose-200 text-[#c81d25] px-4 py-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 mb-4 animate-shake">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#c81d25]" aria-hidden="true" />
           <span className="flex-1 leading-snug">{errorMessage}</span>
         </div>
       )}
 
       {/* Alert Success Banner */}
       {successMessage && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 mb-4">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-600" />
+        <div role="status" aria-live="polite" className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 mb-4">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-600" aria-hidden="true" />
           <span className="flex-1 leading-snug">{successMessage}</span>
         </div>
       )}
