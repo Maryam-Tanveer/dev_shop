@@ -6,10 +6,12 @@ import { getDBStatus } from '../config/db.js'
 
 dotenv.config()
 
-const JWT_SECRET = process.env.JWT_SECRET
-
-if (!JWT_SECRET || !JWT_SECRET.trim()) {
-  throw new Error('[SECURITY FATAL] JWT_SECRET environment variable is missing. Refusing to start server with fallback secrets.')
+export const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET
+  if (!secret || !secret.trim()) {
+    throw new Error('[SECURITY FATAL] JWT_SECRET environment variable is missing. Please configure JWT_SECRET in environment variables.')
+  }
+  return secret
 }
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
@@ -24,7 +26,7 @@ export const generateToken = (user) => {
       email: user.email,
       role: user.role || 'member',
     },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: JWT_EXPIRES_IN }
   )
 }
@@ -96,7 +98,7 @@ export const requireAuth = async (req, res, next) => {
       })
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET)
+    const decoded = jwt.verify(token, getJwtSecret())
 
     const user = await resolveUserById(decoded.id)
     if (!user) {
@@ -144,7 +146,7 @@ export const requireAdmin = async (req, res, next) => {
       })
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET)
+    const decoded = jwt.verify(token, getJwtSecret())
 
     const user = await resolveUserById(decoded.id)
     if (!user) {
@@ -187,7 +189,7 @@ export const optionalAuth = async (req, res, next) => {
   try {
     const token = extractToken(req)
     if (token && !(await isTokenRevoked(token))) {
-      const decoded = jwt.verify(token, JWT_SECRET)
+      const decoded = jwt.verify(token, getJwtSecret())
       const user = await resolveUserById(decoded.id)
       if (user) {
         req.user = user

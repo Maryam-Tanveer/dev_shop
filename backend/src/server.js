@@ -24,7 +24,7 @@ import cookieParser from 'cookie-parser'
 dotenv.config()
 
 if (!process.env.JWT_SECRET || !process.env.JWT_SECRET.trim()) {
-  throw new Error('[SECURITY FATAL] Missing required environment variable: JWT_SECRET must be set. Server startup aborted.')
+  console.warn('[SECURITY WARNING] Missing required environment variable: JWT_SECRET is not set in environment variables! Auth endpoints will strictly refuse requests until configured.')
 }
 
 const app = express()
@@ -113,12 +113,20 @@ app.use(async (req, res, next) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const missingEnv = []
+  if (!process.env.JWT_SECRET) missingEnv.push('JWT_SECRET')
+  if (!process.env.MONGO_URI && !process.env.MONGODB_URI) missingEnv.push('MONGO_URI')
+  if (!process.env.STRIPE_SECRET_KEY) missingEnv.push('STRIPE_SECRET_KEY')
+
   res.json({
-    status: 'ok',
+    status: missingEnv.length ? 'degraded' : 'ok',
     environment: NODE_ENV,
     uptime: `${process.uptime().toFixed(1)}s`,
     database: getDBStatus(),
-    message: 'Dev Shop Drop Vault API is operational',
+    missingEnv: missingEnv.length ? missingEnv : undefined,
+    message: missingEnv.length
+      ? `Dev Shop API is active but missing environment variables in deployment: ${missingEnv.join(', ')}`
+      : 'Dev Shop Drop Vault API is operational',
     timestamp: new Date().toISOString(),
   })
 })
