@@ -2,18 +2,17 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Heart, Star, ShoppingBag, ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
-import { RELATED_PRODUCTS as FALLBACK_RELATED } from '../../data/related'
 
 export default function RelatedProducts({ onSelectProduct, onAddToCart, onToggleWishlist, wishlist = {} }) {
   const navigate = useNavigate()
-  const [items, setItems] = useState(FALLBACK_RELATED)
+  const [items, setItems] = useState([])
 
   useEffect(() => {
     let isMounted = true
     api
       .getRelatedProducts()
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setItems(data)
         }
       })

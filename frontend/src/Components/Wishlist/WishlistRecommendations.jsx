@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Heart, Star, Plus, ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
-import { WISHLIST_RECOMMENDATIONS as FALLBACK_RECOMMENDATIONS } from '../../data/wishlist'
 
 export default function WishlistRecommendations({
   onAddToCart,
@@ -11,14 +10,14 @@ export default function WishlistRecommendations({
   wishlist = {}
 }) {
   const navigate = useNavigate()
-  const [items, setItems] = useState(FALLBACK_RECOMMENDATIONS)
+  const [items, setItems] = useState([])
 
   useEffect(() => {
     let isMounted = true
     api
       .getWishlistRecommendations()
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setItems(data)
         }
       })

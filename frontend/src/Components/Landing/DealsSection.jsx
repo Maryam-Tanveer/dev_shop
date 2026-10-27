@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Flame, Clock, Heart, Star, ShoppingBag, Check, ChevronRight } from 'lucide-react'
 import { api } from '../../services/api'
-import { DEALS_OF_THE_DAY as FALLBACK_DEALS } from '../../data/deals'
 
 export default function DealsSection({ onAddToCart, wishlist = {}, onToggleWishlist, onSelectProduct }) {
   const navigate = useNavigate()
-  const [deals, setDeals] = useState(FALLBACK_DEALS)
+  const [deals, setDeals] = useState([])
   const [offset, setOffset] = useState(0)
   const [addedId, setAddedId] = useState(null)
   const [timeLeft, setTimeLeft] = useState({ hours: 11, minutes: 20, seconds: 6 })
@@ -24,7 +23,7 @@ export default function DealsSection({ onAddToCart, wishlist = {}, onToggleWishl
     api
       .getDeals()
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setDeals(data)
         }
       })

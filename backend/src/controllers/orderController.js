@@ -1,15 +1,13 @@
 import crypto from 'crypto'
-import { RECENT_DROP_ORDERS } from '../data/mockData.js'
 import Order from '../models/Order.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
-import { getDBStatus } from '../config/db.js'
 import { sendOrderReceiptEmail } from '../services/emailService.js'
 import { getAuthoritativeProduct } from './cartController.js'
 
 /**
  * GET /api/orders (Admin Only)
- * Fetch all platform orders across all users
+ * Fetch all platform orders across all users from MongoDB
  */
 export const getOrders = asyncHandler(async (req, res) => {
   if (req.user?.role !== 'admin') {
@@ -19,71 +17,40 @@ export const getOrders = asyncHandler(async (req, res) => {
     })
   }
 
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      const orders = await Order.find().sort({ createdAt: -1 })
-      return res.json({
-        success: true,
-        count: orders.length,
-        data: orders,
-      })
-    } catch {
-      // Fallback if DB query errors
-    }
-  }
-
+  const orders = await Order.find().sort({ createdAt: -1 })
   res.json({
     success: true,
-    count: RECENT_DROP_ORDERS.length,
-    data: RECENT_DROP_ORDERS,
+    count: orders.length,
+    data: orders,
   })
 })
 
 /**
  * GET /api/orders/my-orders (Authenticated User)
- * Fetch ONLY the logged in user's personal orders
+ * Fetch ONLY the logged in user's personal orders from MongoDB
  */
 export const getMyOrders = asyncHandler(async (req, res) => {
   const userId = req.user?.id || req.user?._id
   const userEmail = req.user?.email?.toLowerCase()
 
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      const query = {
-        $or: [
-          ...(userId ? [{ user: userId }] : []),
-          ...(userEmail ? [{ userEmail: userEmail }] : []),
-        ],
-      }
-      const orders = await Order.find(query).sort({ createdAt: -1 })
-      return res.json({
-        success: true,
-        count: orders.length,
-        data: orders,
-      })
-    } catch {
-      // Fallback to in-memory check
-    }
+  const query = {
+    $or: [
+      ...(userId ? [{ user: userId }] : []),
+      ...(userEmail ? [{ userEmail: userEmail }] : []),
+    ],
   }
 
-  const userOrders = RECENT_DROP_ORDERS.filter(
-    (o) =>
-      (userId && String(o.user) === String(userId)) ||
-      (userEmail && o.userEmail?.toLowerCase() === userEmail)
-  )
-
+  const orders = await Order.find(query).sort({ createdAt: -1 })
   res.json({
     success: true,
-    count: userOrders.length,
-    data: userOrders,
+    count: orders.length,
+    data: orders,
   })
 })
 
 /**
  * GET /api/orders/:id (Authenticated User: Owner or Admin)
- * Fetch a specific order only if caller is the owner or an admin
+ * Fetch a specific order from database only if caller is the owner or an admin
  */
 export const getOrderById = asyncHandler(async (req, res, next) => {
   const { id } = req.params
@@ -94,31 +61,13 @@ export const getOrderById = asyncHandler(async (req, res, next) => {
   const cleanNum = id.startsWith('#') ? id.slice(1) : id
   const hashedNum = `#${cleanNum}`
 
-  let order = null
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      order = await Order.findOne({
-        $or: [
-          { orderNumber: cleanNum },
-          { orderNumber: hashedNum },
-          { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
-        ],
-      })
-    } catch {
-      // Fallback to in-memory check
-    }
-  }
-
-  if (!order) {
-    order = RECENT_DROP_ORDERS.find(
-      (o) =>
-        o.id === cleanNum ||
-        o.id === hashedNum ||
-        o.orderNumber === cleanNum ||
-        o.orderNumber === hashedNum
-    )
-  }
+  const order = await Order.findOne({
+    $or: [
+      { orderNumber: cleanNum },
+      { orderNumber: hashedNum },
+      { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
+    ],
+  })
 
   if (!order) {
     return next(new AppError(`Order '${id}' not found`, 404))
@@ -145,6 +94,10 @@ export const getOrderById = asyncHandler(async (req, res, next) => {
   })
 })
 
+/**
+ * POST /api/orders
+ * Creates an authoritative order in MongoDB and dispatches receipt
+ */
 export const createOrder = asyncHandler(async (req, res, next) => {
   const { email, items, shippingAddress, shippingMethod, paymentMethod } = req.body
 
@@ -160,7 +113,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
       return next(new AppError('Each order item must specify a valid productId', 400))
     }
 
-    // Authoritative product lookup from database/server catalog
+    // Authoritative product lookup from database
     const serverProduct = await getAuthoritativeProduct(productId)
     if (!serverProduct) {
       return next(new AppError(`Product '${productId}' not found in catalog`, 400))
@@ -183,7 +136,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     sanitizedItems.push({
       productId: serverProduct.id,
       title: serverProduct.title,
-      price: Number(serverProduct.price), // Authoritative price from server/DB - client price ignored!
+      price: Number(serverProduct.price), // Authoritative price from database
       quantity,
       size,
       colorway,
@@ -221,28 +174,8 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     createdAt: new Date().toISOString(),
   }
 
-  let finalOrder = newOrderData
-
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      const savedOrder = await Order.create(newOrderData)
-      finalOrder = savedOrder.toObject ? savedOrder.toObject() : savedOrder
-    } catch (e) {
-      if (process.env.NODE_ENV === 'production') {
-        return next(new AppError('Failed to record order to persistent database.', 500))
-      }
-      console.warn('[ORDER DB NOTICE] Saved to memory fallback:', e.message)
-      RECENT_DROP_ORDERS.unshift(newOrderData)
-    }
-  } else {
-    if (process.env.NODE_ENV === 'production') {
-      return next(
-        new AppError('Database connection unavailable. Cannot place order in production without persistent database.', 503)
-      )
-    }
-    RECENT_DROP_ORDERS.unshift(newOrderData)
-  }
+  const savedOrder = await Order.create(newOrderData)
+  const finalOrder = savedOrder.toObject ? savedOrder.toObject() : savedOrder
 
   // Only dispatch receipt if payment is confirmed; for card orders, webhook sends receipt once payment succeeds
   if (finalOrder.status === 'Confirmed' || finalOrder.paymentStatus === 'paid') {

@@ -11,7 +11,6 @@ import CatalogPagination from '../../Components/Catalog/CatalogPagination'
 import { useCart } from '../../context/CartContext'
 import { useWishlist } from '../../context/WishlistContext'
 import { api } from '../../services/api'
-import { CATALOG_PRODUCTS as FALLBACK_PRODUCTS } from '../../data/catalog'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 
 export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
@@ -34,7 +33,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const [activeNav, setActiveNav] = useState('PRODUCTS')
   const [toast, setToast] = useState(null)
   const [visibleCount, setVisibleCount] = useState(6)
-  const [products, setProducts] = useState(FALLBACK_PRODUCTS)
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
     api
       .getProducts({ category: selectedCollection })
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setProducts(data)
         }
       })

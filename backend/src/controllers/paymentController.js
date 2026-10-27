@@ -2,9 +2,7 @@ import crypto from 'crypto'
 import Stripe from 'stripe'
 import Order from '../models/Order.js'
 import { getAuthoritativeProduct } from './cartController.js'
-import { getDBStatus } from '../config/db.js'
 import { sendOrderReceiptEmail } from '../services/emailService.js'
-import { RECENT_DROP_ORDERS } from '../data/mockData.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 
@@ -81,27 +79,9 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
     createdAt: new Date().toISOString(),
   }
 
-  let savedOrder = newOrderData
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      const created = await Order.create(newOrderData)
-      savedOrder = created.toObject ? created.toObject() : created
-    } catch (e) {
-      if (process.env.NODE_ENV === 'production') {
-        return next(new AppError('Failed to record order to persistent database.', 500))
-      }
-      console.warn('[Stripe Checkout Order Notice]:', e.message)
-      RECENT_DROP_ORDERS.unshift(newOrderData)
-    }
-  } else {
-    if (process.env.NODE_ENV === 'production') {
-      return next(
-        new AppError('Database connection unavailable. Cannot initiate checkout in production without persistent database.', 503)
-      )
-    }
-    RECENT_DROP_ORDERS.unshift(newOrderData)
-  }
+  // 2. Persist Order directly to MongoDB
+  const created = await Order.create(newOrderData)
+  const savedOrder = created.toObject ? created.toObject() : created
 
   // 3. Initialize Stripe Checkout Session
   const stripe = getStripe()
@@ -218,27 +198,12 @@ export const stripeWebhook = async (req, res) => {
       return res.status(200).json({ received: true, message: 'Session payment status not paid' })
     }
 
-    const dbStatus = getDBStatus()
-    let order = null
-
-    if (dbStatus.connected) {
-      try {
-        order = await Order.findOne({
-          $or: [
-            ...(orderNumber ? [{ orderNumber }] : []),
-            ...(sessionId ? [{ stripeSessionId: sessionId }] : []),
-          ],
-        })
-      } catch (err) {
-        console.error('[STRIPE WEBHOOK DB ERROR]:', err.message)
-      }
-    }
-
-    if (!order) {
-      order = RECENT_DROP_ORDERS.find(
-        (o) => o.orderNumber === orderNumber || o.stripeSessionId === sessionId
-      )
-    }
+    const order = await Order.findOne({
+      $or: [
+        ...(orderNumber ? [{ orderNumber }] : []),
+        ...(sessionId ? [{ stripeSessionId: sessionId }] : []),
+      ],
+    })
 
     if (!order) {
       console.warn(`[STRIPE WEBHOOK] Order not found for orderNumber: ${orderNumber}, sessionId: ${sessionId}`)
@@ -306,27 +271,12 @@ export const verifySession = asyncHandler(async (req, res, next) => {
   }
 
   const orderNumber = session.metadata?.orderNumber
-  const dbStatus = getDBStatus()
-  let order = null
-
-  if (dbStatus.connected) {
-    try {
-      order = await Order.findOne({
-        $or: [
-          ...(orderNumber ? [{ orderNumber }] : []),
-          { stripeSessionId: sessionId },
-        ],
-      })
-    } catch (err) {
-      console.warn('[Verify Session DB update notice]:', err.message)
-    }
-  }
-
-  if (!order) {
-    order = RECENT_DROP_ORDERS.find(
-      (o) => o.orderNumber === orderNumber || o.stripeSessionId === sessionId
-    )
-  }
+  const order = await Order.findOne({
+    $or: [
+      ...(orderNumber ? [{ orderNumber }] : []),
+      { stripeSessionId: sessionId },
+    ],
+  })
 
   if (!order) {
     return next(new AppError('Order not found for verified session', 404))

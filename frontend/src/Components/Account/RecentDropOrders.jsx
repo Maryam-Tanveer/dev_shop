@@ -10,7 +10,6 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { api } from '../../services/api'
-import { RECENT_DROP_ORDERS as FALLBACK_ORDERS } from '../../data/orders'
 
 export default function RecentDropOrders({
   onTrackOrder,
@@ -20,20 +19,25 @@ export default function RecentDropOrders({
   onViewCertificate,
   onReorder,
 }) {
-  const [orders, setOrders] = useState(FALLBACK_ORDERS)
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('ALL')
 
   useEffect(() => {
     let isMounted = true
+    setLoading(true)
     api
       .getOrders()
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setOrders(data)
         }
       })
       .catch((err) => {
         console.error('Failed to load orders from API:', err)
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false)
       })
 
     return () => {
@@ -75,8 +79,18 @@ export default function RecentDropOrders({
         </div>
       </div>
 
-      {/* Orders Map */}
-      {filteredOrders.map((order) => {
+      {/* Orders List / Empty State */}
+      {filteredOrders.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-neutral-200/90 p-10 text-center shadow-xs">
+          <p className="text-sm font-bold text-neutral-500 mb-2">
+            {loading ? 'Loading authenticated vault orders...' : 'No orders found matching this filter.'}
+          </p>
+          <p className="text-xs text-neutral-400">
+            {loading ? 'Please wait a moment.' : 'Your placed drop allocations and invoices will appear here.'}
+          </p>
+        </div>
+      ) : (
+        filteredOrders.map((order) => {
         const isInVault = order.statusType === 'in-vault'
 
         return (
@@ -254,7 +268,7 @@ export default function RecentDropOrders({
             </div>
           </div>
         )
-      })}
+      }))}
 
       {/* Bottom Archive Callout */}
       <div className="bg-[#f5f3ee] rounded-3xl p-6 border border-neutral-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">

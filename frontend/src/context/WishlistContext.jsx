@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { api } from '../services/api'
-import { INITIAL_WISHLIST_ITEMS } from '../data/wishlist'
 
 const WISHLIST_STORAGE_KEY = 'devshop_wishlist_items_v2'
 
@@ -17,7 +16,7 @@ export function WishlistProvider({ children }) {
     } catch (e) {
       console.warn('[Wishlist] Failed to read localStorage:', e)
     }
-    return INITIAL_WISHLIST_ITEMS || []
+    return []
   })
 
   // Synchronize with backend API on mount

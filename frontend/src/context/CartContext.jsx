@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { api } from '../services/api'
-import { getProductById as getLocalProductById } from '../data/products'
 
 /**
  * Storage version key: Stores strictly minimal variant descriptors:

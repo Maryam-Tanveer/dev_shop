@@ -9,7 +9,6 @@ import ProductInfo from '../../Components/ProductDetails/ProductInfo'
 import ProductSpecsTabs from '../../Components/ProductDetails/ProductSpecsTabs'
 import RelatedProducts from '../../Components/ProductDetails/RelatedProducts'
 import { api } from '../../services/api'
-import { getProductById as getFallbackProduct } from '../../data/products'
 import { useCart } from '../../context/CartContext'
 import { useWishlist } from '../../context/WishlistContext'
 import NotFoundPage from '../NotFound/NotFoundPage'
@@ -18,7 +17,7 @@ import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 export default function ProductDetailsPage({ productId, onSelectProduct, onNavigate }) {
   const navigate = useNavigate()
   const { wishlistMap, wishlistCount, toggleWishlist } = useWishlist()
-  const [product, setProduct] = useState(() => (productId ? getFallbackProduct(productId) : null))
+  const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -47,13 +46,6 @@ export default function ProductDetailsPage({ productId, onSelectProduct, onNavig
     let isMounted = true
     setLoading(true)
 
-    // Check local data first for instantaneous display
-    const local = getFallbackProduct(productId)
-    if (local) {
-      setProduct(local)
-      setNotFound(false)
-    }
-
     api
       .getProductById(productId)
       .then((data) => {
@@ -61,7 +53,7 @@ export default function ProductDetailsPage({ productId, onSelectProduct, onNavig
           if (data) {
             setProduct(data)
             setNotFound(false)
-          } else if (!local) {
+          } else {
             setProduct(null)
             setNotFound(true)
           }
@@ -69,7 +61,7 @@ export default function ProductDetailsPage({ productId, onSelectProduct, onNavig
       })
       .catch((err) => {
         console.error('Failed to fetch product from API:', err)
-        if (isMounted && !local) {
+        if (isMounted) {
           setProduct(null)
           setNotFound(true)
         }

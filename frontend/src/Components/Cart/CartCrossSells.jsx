@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '../../services/api'
-import { CROSS_SELL_ITEMS as FALLBACK_CROSS_SELLS } from '../../data/cartSuggestions'
 
 export default function CartCrossSells({
   onAddToCart,
@@ -11,7 +10,7 @@ export default function CartCrossSells({
   wishlist = {}
 }) {
   const navigate = useNavigate()
-  const [items, setItems] = useState(FALLBACK_CROSS_SELLS)
+  const [items, setItems] = useState([])
   const [offset, setOffset] = useState(0)
 
   useEffect(() => {
@@ -19,7 +18,7 @@ export default function CartCrossSells({
     api
       .getCartSuggestions()
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setItems(data)
         }
       })

@@ -1,4 +1,3 @@
-export * from './products'
 export * from './faq'
 export * from './blog'
 export * from './collections'

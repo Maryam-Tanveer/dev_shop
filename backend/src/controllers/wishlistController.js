@@ -1,14 +1,12 @@
-import { lookupServerProduct } from './cartController.js'
+import { getAuthoritativeProduct } from './cartController.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
-import { WISHLIST_RECOMMENDATIONS } from '../data/mockData.js'
 
 // In-memory wishlist store keyed by userId or guestToken/default
 const WISHLIST_STORE = new Map()
 
-// Seed default guest wishlist with initial deal-1
+// Default guest wishlist key
 const DEFAULT_GUEST_KEY = 'guest_default'
-WISHLIST_STORE.set(DEFAULT_GUEST_KEY, new Set(['deal-1', 'jordan-6-eastside']))
 
 const getSessionKey = (req) => {
   if (req.user && req.user.id) {
@@ -27,15 +25,11 @@ const getSetForRequest = (req) => {
 }
 
 /**
- * Hydrate a product ID into full display product
+ * Hydrate a product ID into full display product via MongoDB lookup
  */
-const hydrateProduct = (productId) => {
-  const serverProd = lookupServerProduct(productId)
+const hydrateProduct = async (productId) => {
+  const serverProd = await getAuthoritativeProduct(productId)
   if (serverProd) return serverProd
-
-  // Check initial wishlist items
-  const foundInitial = (INITIAL_WISHLIST_ITEMS || []).find((i) => i.id === productId)
-  if (foundInitial) return foundInitial
 
   return {
     id: productId,
@@ -54,7 +48,7 @@ const hydrateProduct = (productId) => {
 export const getWishlist = asyncHandler(async (req, res) => {
   const set = getSetForRequest(req)
   const ids = Array.from(set)
-  const items = ids.map(hydrateProduct)
+  const items = await Promise.all(ids.map(hydrateProduct))
 
   res.json({
     success: true,
@@ -87,7 +81,7 @@ export const toggleWishlist = asyncHandler(async (req, res, next) => {
   }
 
   const ids = Array.from(set)
-  const items = ids.map(hydrateProduct)
+  const items = await Promise.all(ids.map(hydrateProduct))
 
   res.json({
     success: true,
@@ -110,7 +104,7 @@ export const removeFromWishlist = asyncHandler(async (req, res, next) => {
   set.delete(productId)
 
   const ids = Array.from(set)
-  const items = ids.map(hydrateProduct)
+  const items = await Promise.all(ids.map(hydrateProduct))
 
   res.json({
     success: true,

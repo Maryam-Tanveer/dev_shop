@@ -1,183 +1,131 @@
 import {
-  LIGHT_PRODUCTS,
-  getProductById as lookupProduct,
   toLightProduct,
   toDetailProduct,
-  PRODUCTS_DATABASE,
-  ALL_PRODUCTS,
 } from '../data/products/index.js'
-import {
-  BEST_DEALS,
-  RELATED_PRODUCTS,
-  CROSS_SELL_ITEMS,
-  WISHLIST_RECOMMENDATIONS
-} from '../data/mockData.js'
 import AppError from '../utils/AppError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import Product from '../models/Product.js'
-import { getDBStatus } from '../config/db.js'
 
 /**
- * Get all products (Lightweight shape) with optional filtering by category, brand, or search query
+ * Get all products (Lightweight shape) with optional filtering by category, brand, or search query.
+ * MongoDB is the single source of truth.
  */
 export const getProducts = asyncHandler(async (req, res) => {
   const { category, brand, q } = req.query
-  const dbStatus = getDBStatus()
-
-  if (dbStatus.connected) {
-    try {
-      const filter = {}
-      if (category && category !== 'All') {
-        filter.category = new RegExp(`^${category}$`, 'i')
-      }
-      if (brand && brand !== 'All') {
-        filter.brand = new RegExp(brand, 'i')
-      }
-      if (q && q.trim()) {
-        const queryRegex = new RegExp(q.trim(), 'i')
-        filter.$or = [{ title: queryRegex }, { fullTitle: queryRegex }, { brand: queryRegex }]
-      }
-
-      const dbProducts = await Product.find(filter).lean()
-      if (dbProducts && dbProducts.length > 0) {
-        return res.json({
-          success: true,
-          count: dbProducts.length,
-          data: dbProducts.map(toLightProduct),
-        })
-      }
-    } catch (err) {
-      console.warn('[DB GET PRODUCTS NOTICE]:', err.message)
-    }
-  }
-
-  let results = [...LIGHT_PRODUCTS]
+  const filter = {}
 
   if (category && category !== 'All') {
-    results = results.filter(
-      (p) => p.category?.toLowerCase() === category.toLowerCase()
-    )
+    filter.category = new RegExp(`^${category}$`, 'i')
   }
-
   if (brand && brand !== 'All') {
-    results = results.filter(
-      (p) => p.brand?.toLowerCase().includes(brand.toLowerCase())
-    )
+    filter.brand = new RegExp(brand, 'i')
+  }
+  if (q && q.trim()) {
+    const queryRegex = new RegExp(q.trim(), 'i')
+    filter.$or = [{ title: queryRegex }, { fullTitle: queryRegex }, { brand: queryRegex }]
   }
 
-  if (q && q.trim()) {
-    const query = q.trim().toLowerCase()
-    results = results.filter(
-      (p) =>
-        p.title?.toLowerCase().includes(query) ||
-        p.fullTitle?.toLowerCase().includes(query) ||
-        p.brand?.toLowerCase().includes(query)
-    )
+  const dbProducts = await Product.find(filter).lean()
+
+  res.json({
+    success: true,
+    count: dbProducts.length,
+    data: dbProducts.map(toLightProduct),
+  })
+})
+
+/**
+ * Get single product by ID (Full Detail shape) directly from MongoDB
+ */
+export const getProductById = asyncHandler(async (req, res, next) => {
+  const { id } = req.params
+
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(id)
+  const query = isObjectId ? { $or: [{ id }, { _id: id }] } : { id }
+  const dbProduct = await Product.findOne(query).lean()
+
+  if (!dbProduct) {
+    return next(new AppError(`Product with id '${id}' not found`, 404))
   }
+
+  res.json({
+    success: true,
+    data: toDetailProduct(dbProduct),
+  })
+})
+
+/**
+ * Get best deals (Lightweight shape) from MongoDB
+ */
+export const getDeals = asyncHandler(async (req, res) => {
+  const deals = await Product.find({
+    $or: [
+      { originalPrice: { $gt: 0 } },
+      { badge: /OFF|SALE|DEAL/i },
+      { id: /^deal-/ },
+    ],
+  })
+    .limit(8)
+    .lean()
+
+  const results = deals.length > 0 ? deals : await Product.find().limit(4).lean()
 
   res.json({
     success: true,
     count: results.length,
-    data: results
+    data: results.map(toLightProduct),
   })
 })
 
 /**
- * Get single product by ID (Full Detail shape)
+ * Get related products (Lightweight shape) from MongoDB
  */
-export const getProductById = asyncHandler(async (req, res, next) => {
-  const { id } = req.params
-  const dbStatus = getDBStatus()
+export const getRelatedProducts = asyncHandler(async (req, res) => {
+  const { category, currentId } = req.query
+  const filter = {}
 
-  if (dbStatus.connected) {
-    try {
-      const dbProduct = await Product.findOne({ id }).lean()
-      if (dbProduct) {
-        return res.json({
-          success: true,
-          data: toDetailProduct(dbProduct)
-        })
-      }
-    } catch (err) {
-      console.warn('[DB GET PRODUCT BY ID NOTICE]:', err.message)
-    }
+  if (category && category !== 'All') {
+    filter.category = new RegExp(category, 'i')
+  }
+  if (currentId) {
+    filter.id = { $ne: currentId }
   }
 
-  const rawProduct = lookupProduct(id)
-
-  if (!rawProduct) {
-    return next(new AppError(`Product with id '${id}' not found`, 404))
+  let products = await Product.find(filter).limit(4).lean()
+  if (products.length === 0) {
+    products = await Product.find().limit(4).lean()
   }
-
-  const fullProduct = toDetailProduct(rawProduct)
 
   res.json({
     success: true,
-    data: fullProduct
+    count: products.length,
+    data: products.map(toLightProduct),
   })
 })
 
 /**
- * Get best deals (Lightweight shape)
+ * Get cart suggestions / cross-sells (Lightweight shape) from MongoDB
  */
-export const getDeals = (req, res) => {
-  // Combine deals from rich catalog + BEST_DEALS normalized to unified light shape
-  const dealsMap = new Map()
-
-  // First add deals from the rich catalog
-  LIGHT_PRODUCTS.filter((p) => p.isDeal).forEach((p) => dealsMap.set(p.id, p))
-
-  // Merge any additional entries from BEST_DEALS normalized
-  BEST_DEALS.forEach((deal) => {
-    if (!dealsMap.has(deal.id)) {
-      dealsMap.set(deal.id, toLightProduct(deal))
-    }
-  })
-
-  const deals = Array.from(dealsMap.values())
-
+export const getCartSuggestions = asyncHandler(async (req, res) => {
+  const suggestions = await Product.find({ inStock: true }).limit(4).lean()
   res.json({
     success: true,
-    count: deals.length,
-    data: deals
+    count: suggestions.length,
+    data: suggestions.map(toLightProduct),
   })
-}
+})
 
 /**
- * Get related products (Lightweight shape)
+ * Get wishlist recommendations (Lightweight shape) from MongoDB
  */
-export const getRelatedProducts = (req, res) => {
-  const normalized = RELATED_PRODUCTS.map(toLightProduct)
+export const getWishlistRecommendations = asyncHandler(async (req, res) => {
+  const recommendations = await Product.find({ inStock: true }).skip(2).limit(4).lean()
   res.json({
     success: true,
-    count: normalized.length,
-    data: normalized
+    count: recommendations.length,
+    data: recommendations.map(toLightProduct),
   })
-}
-
-/**
- * Get cart suggestions / cross-sells (Lightweight shape)
- */
-export const getCartSuggestions = (req, res) => {
-  const normalized = CROSS_SELL_ITEMS.map(toLightProduct)
-  res.json({
-    success: true,
-    count: normalized.length,
-    data: normalized
-  })
-}
-
-/**
- * Get wishlist recommendations (Lightweight shape)
- */
-export const getWishlistRecommendations = (req, res) => {
-  const normalized = WISHLIST_RECOMMENDATIONS.map(toLightProduct)
-  res.json({
-    success: true,
-    count: normalized.length,
-    data: normalized
-  })
-}
+})
 
 /**
  * Create a new streetwear drop (Admin only)
@@ -202,9 +150,12 @@ export const createProduct = asyncHandler(async (req, res) => {
     colorways,
   } = req.body
 
-  const generatedId = customId || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + `-${Date.now().toString(36)}`
+  const generatedId =
+    customId ||
+    title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') +
+      `-${Date.now().toString(36)}`
 
-  const newRawItem = {
+  const newProduct = await Product.create({
     id: generatedId,
     title,
     fullTitle: fullTitle || title,
@@ -212,158 +163,86 @@ export const createProduct = asyncHandler(async (req, res) => {
     category,
     price: Number(price),
     originalPrice: originalPrice ? Number(originalPrice) : null,
-    stockStatus,
-    stock: Number(stock),
+    stockCount: Number(stock),
+    inStock: stockStatus !== 'Sold Out',
     badge: badge || 'NEW DROP',
-    badgeType: badgeType || 'hot',
-    badgeColor: badgeColor || 'bg-[#c81d25] text-white',
     image,
-    description: description || `${title} engineered by ${brand}. Limited edition archive release with guaranteed vault authentication.`,
-    sizes: sizes && sizes.length > 0 ? sizes : [
-      { size: '8.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '9.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '9.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '10.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '10.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '11.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-    ],
-    colorways: colorways && colorways.length > 0 ? colorways : [
-      { id: 'og', name: 'Original Colorway', color: '#171717' }
-    ],
-    isNew: true,
-    isDeal: Boolean(originalPrice && originalPrice > price),
-    tag: 'Vault Certified',
-    rating: 5.0,
-    reviews: 1,
-    verified: true,
-    dropCode: 'ADMIN DROP',
-    edition: '2026 ARCHIVE'
-  }
-
-  const detailProduct = toDetailProduct(newRawItem)
-  const lightProduct = toLightProduct(detailProduct)
-
-  // In-memory cache sync for instant catalog updates
-  PRODUCTS_DATABASE[generatedId] = detailProduct
-  ALL_PRODUCTS.unshift(detailProduct)
-  LIGHT_PRODUCTS.unshift(lightProduct)
-
-  // MongoDB persistence if connected
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      await Product.create({
-        id: generatedId,
-        title,
-        fullTitle: fullTitle || title,
-        brand,
-        category,
-        price: Number(price),
-        originalPrice: originalPrice ? Number(originalPrice) : null,
-        image,
-        badge,
-        inStock: stockStatus !== 'Sold Out',
-        stockCount: Number(stock),
-        description: newRawItem.description,
-      })
-    } catch (err) {
-      console.warn('[DB CREATE PRODUCT NOTICE]:', err.message)
-    }
-  }
+    description:
+      description ||
+      `${title} engineered by ${brand}. Limited edition archive release with guaranteed vault authentication.`,
+    sizes:
+      sizes && sizes.length > 0
+        ? sizes.map((s) => (typeof s === 'string' ? s : s.size))
+        : ['8.5', '9.0', '9.5', '10.0', '10.5', '11.0'],
+    colors:
+      colorways && colorways.length > 0
+        ? colorways.map((c) => ({
+            name: c.name || c.id || 'Colorway',
+            hex: c.color || '#171717',
+            image,
+          }))
+        : [{ name: 'OG', hex: '#171717', image }],
+  })
 
   res.status(201).json({
     success: true,
     message: `Drop '${title}' successfully deployed to Dev Shop Vault.`,
-    data: detailProduct
+    data: toDetailProduct(newProduct.toObject ? newProduct.toObject() : newProduct),
   })
 })
 
 /**
- * Update drop status, stock, price, or details (Admin only)
+ * Update drop status, stock, price, or details (Admin only) directly in MongoDB
  */
 export const updateProduct = asyncHandler(async (req, res, next) => {
   const { id } = req.params
   const updates = req.body
 
-  const existing = PRODUCTS_DATABASE[id]
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(id)
+  const query = isObjectId ? { $or: [{ id }, { _id: id }] } : { id }
+
+  const existing = await Product.findOne(query)
   if (!existing) {
     return next(new AppError(`Product with id '${id}' not found`, 404))
   }
 
-  const updatedItem = {
-    ...existing,
-    ...updates,
-    price: updates.price !== undefined ? Number(updates.price) : existing.price,
-    originalPrice: updates.originalPrice !== undefined ? (updates.originalPrice ? Number(updates.originalPrice) : null) : existing.originalPrice,
-    stock: updates.stock !== undefined ? Number(updates.stock) : existing.stock,
-    stockStatus: updates.stockStatus || existing.stockStatus,
-    isUnavailable: updates.stockStatus === 'Sold Out' || updates.stockStatus === 'TBA' || updates.isUnavailable,
+  if (updates.stockStatus) {
+    updates.inStock = updates.stockStatus !== 'Sold Out'
+  }
+  if (updates.stock !== undefined) {
+    updates.stockCount = Number(updates.stock)
+  }
+  if (updates.price !== undefined) {
+    updates.price = Number(updates.price)
+  }
+  if (updates.originalPrice !== undefined) {
+    updates.originalPrice = updates.originalPrice ? Number(updates.originalPrice) : null
   }
 
-  const detailProduct = toDetailProduct(updatedItem)
-  const lightProduct = toLightProduct(detailProduct)
-
-  PRODUCTS_DATABASE[id] = detailProduct
-
-  const allIdx = ALL_PRODUCTS.findIndex((p) => p.id === id)
-  if (allIdx !== -1) ALL_PRODUCTS[allIdx] = detailProduct
-
-  const lightIdx = LIGHT_PRODUCTS.findIndex((p) => p.id === id)
-  if (lightIdx !== -1) LIGHT_PRODUCTS[lightIdx] = lightProduct
-
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      await Product.findOneAndUpdate(
-        { id },
-        {
-          ...updates,
-          inStock: updatedItem.stockStatus !== 'Sold Out',
-          stockCount: updatedItem.stock
-        },
-        { new: true }
-      )
-    } catch (err) {
-      console.warn('[DB UPDATE PRODUCT NOTICE]:', err.message)
-    }
-  }
+  const updatedProduct = await Product.findOneAndUpdate(query, updates, { new: true }).lean()
 
   res.json({
     success: true,
-    message: `Drop '${id}' status updated to ${updatedItem.stockStatus} (Stock: ${updatedItem.stock}).`,
-    data: detailProduct
+    message: `Drop '${id}' status updated in database.`,
+    data: toDetailProduct(updatedProduct),
   })
 })
 
 /**
- * Delete / Archive drop from vault (Admin only)
+ * Delete / Archive drop from vault (Admin only) directly in MongoDB
  */
 export const deleteProduct = asyncHandler(async (req, res, next) => {
   const { id } = req.params
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(id)
+  const query = isObjectId ? { $or: [{ id }, { _id: id }] } : { id }
 
-  if (!PRODUCTS_DATABASE[id]) {
+  const deleted = await Product.findOneAndDelete(query).lean()
+  if (!deleted) {
     return next(new AppError(`Product with id '${id}' not found`, 404))
-  }
-
-  delete PRODUCTS_DATABASE[id]
-
-  const allIdx = ALL_PRODUCTS.findIndex((p) => p.id === id)
-  if (allIdx !== -1) ALL_PRODUCTS.splice(allIdx, 1)
-
-  const lightIdx = LIGHT_PRODUCTS.findIndex((p) => p.id === id)
-  if (lightIdx !== -1) LIGHT_PRODUCTS.splice(lightIdx, 1)
-
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      await Product.findOneAndDelete({ id })
-    } catch (err) {
-      console.warn('[DB DELETE PRODUCT NOTICE]:', err.message)
-    }
   }
 
   res.json({
     success: true,
-    message: `Drop '${id}' archived and removed from active vault.`
+    message: `Drop '${id}' archived and removed from active vault.`,
   })
 })

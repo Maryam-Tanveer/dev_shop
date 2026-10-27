@@ -1,5 +1,4 @@
 import { ShieldCheck, Tag } from 'lucide-react'
-import { ORDER_PURCHASED_ITEMS as items } from '../../data/orders'
 
 export default function OrderPurchasedItems({ items: customItems }) {
   const items = (customItems && customItems.length > 0)
@@ -18,7 +17,7 @@ export default function OrderPurchasedItems({ items: customItems }) {
         subBadge: item.subBadge || 'Vault Verified',
         subBadgeColor: item.subBadgeColor || 'text-emerald-600',
       }))
-    : ORDER_PURCHASED_ITEMS
+    : []
 
   return (
     <div className="bg-white rounded-3xl border border-neutral-200/90 p-6 sm:p-7 shadow-xs mb-6">
