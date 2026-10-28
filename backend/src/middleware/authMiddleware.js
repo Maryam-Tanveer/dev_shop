@@ -48,6 +48,7 @@ const resolveUserById = async (id) => {
           role: dbUser.role || 'member',
           avatar: dbUser.avatar,
           memberTier: dbUser.memberTier,
+          tier: dbUser.memberTier,
           addresses: dbUser.addresses || [],
         }
       }

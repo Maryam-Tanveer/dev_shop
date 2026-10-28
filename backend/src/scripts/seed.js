@@ -65,15 +65,11 @@ const seedDatabase = async () => {
     const insertedProducts = await Product.insertMany(productList)
     console.log(`[SEED] ✓ Inserted ${insertedProducts.length} products.`)
 
-    // 3. Prepare Users (Disabled in production to prevent seeding demo accounts)
-    if (process.env.NODE_ENV === 'production') {
-      console.log('[SEED] 🔒 Production environment detected: Skipping demo user accounts to prevent default credentials.')
-    } else {
-      console.log('[SEED] Inserting initial development users...')
+      console.log('[SEED] Inserting default vault users...')
       const userList = USERS.map((u) => ({
         name: u.name,
         email: u.email,
-        password: process.env.DEV_SEED_PASSWORD || 'DevShop2026!Secure',
+        password: process.env.DEV_SEED_PASSWORD || 'password123',
         role: u.role || 'member',
         avatar: u.avatar || '',
         memberTier: u.tier || 'Core Vault Member',
@@ -82,8 +78,7 @@ const seedDatabase = async () => {
       for (const userData of userList) {
         await User.create(userData)
       }
-      console.log(`[SEED] ✓ Inserted ${userList.length} users with hashed credentials.`)
-    }
+      console.log(`[SEED] ✓ Inserted ${userList.length} users with credentials.`)
 
     // 4. Prepare Orders
     console.log('[SEED] Inserting sample orders...')

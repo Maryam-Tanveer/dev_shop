@@ -146,7 +146,7 @@ export function AuthProvider({ children }) {
       }
       const payload = typeof credentialOrToken === 'string'
         ? { idToken: credentialOrToken }
-        : credentialOrToken.idToken
+        : credentialOrToken.idToken || credentialOrToken.email
         ? credentialOrToken
         : { idToken: credentialOrToken.credential || credentialOrToken.token || '' }
 
