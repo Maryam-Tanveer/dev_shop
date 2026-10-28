@@ -209,28 +209,8 @@ export default function AuthCard({
       return
     }
 
-    // 3. Fallback direct authentication
-    try {
-      const res = await auth.loginWithGoogle({
-        name: 'Maryam Tanveer',
-        email: 'maryamtanveer233@gmail.com',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      })
-      setIsSubmitting(false)
-      if (res.success) {
-        setSuccessMessage(`Welcome, ${res.user.name}! Successfully signed in with Google.`)
-        if (activeTab === 'create' && onSignUpSuccess) {
-          onSignUpSuccess(res.user)
-        } else if (onLoginSuccess) {
-          onLoginSuccess(res.user)
-        }
-      } else {
-        setErrorMessage(res.error || 'Google authentication failed.')
-      }
-    } catch (err) {
-      setIsSubmitting(false)
-      setErrorMessage(err.message || 'Google authentication failed.')
-    }
+    setIsSubmitting(false)
+    setErrorMessage('Google Sign-In is initializing. Please try again.')
   }
 
 
@@ -482,37 +462,6 @@ export default function AuthCard({
               />
               <span className="text-neutral-600 font-medium">Remember this device</span>
             </label>
-          </div>
-
-          {/* Quick Demo Fill Pills */}
-          <div className="pt-1">
-            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1.5">
-              Quick Demo Fill:
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('collector@devshop.io')
-                  setPassword('password123')
-                  setErrorMessage('')
-                }}
-                className="flex-1 py-1.5 px-2.5 rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-[11px] font-bold text-neutral-700 transition cursor-pointer text-center"
-              >
-                👑 Admin Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('sarah@devshop.io')
-                  setPassword('password123')
-                  setErrorMessage('')
-                }}
-                className="flex-1 py-1.5 px-2.5 rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-[11px] font-bold text-neutral-700 transition cursor-pointer text-center"
-              >
-                👤 Member Demo
-              </button>
-            </div>
           </div>
 
           {/* Sign In Button */}
