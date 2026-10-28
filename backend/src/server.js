@@ -38,6 +38,7 @@ connectDB()
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   })
 )
 
