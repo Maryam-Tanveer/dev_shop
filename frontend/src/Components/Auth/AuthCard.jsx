@@ -125,92 +125,123 @@ export default function AuthCard({
     setIsSubmitting(true)
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-    // 1. Official Google OAuth 2.0 Popup Window
-    if (googleClientId && window.google?.accounts?.oauth2) {
-      try {
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'email profile openid',
-          callback: async (tokenResponse) => {
-            if (tokenResponse?.access_token) {
-              try {
-                // Fetch real Google user info from Google's official userinfo API
-                const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-                }).then((r) => r.json())
-
-                if (!userInfo.email) {
-                  setIsSubmitting(false)
-                  setErrorMessage('Google did not provide an email address.')
-                  return
-                }
-
-                const res = await auth.loginWithGoogle({
-                  email: userInfo.email,
-                  name: userInfo.name || userInfo.email.split('@')[0],
-                  avatar: userInfo.picture || '',
-                })
-
-                setIsSubmitting(false)
-                if (res.success) {
-                  setSuccessMessage(`Welcome, ${res.user.name}! Authenticated with Google.`)
-                  if (activeTab === 'create' && onSignUpSuccess) {
-                    onSignUpSuccess(res.user)
-                  } else if (onLoginSuccess) {
-                    onLoginSuccess(res.user)
-                  }
-                } else {
-                  setErrorMessage(res.error || 'Google authentication failed.')
-                }
-              } catch (fetchErr) {
-                setIsSubmitting(false)
-                setErrorMessage('Failed to connect to Google account profile.')
-              }
-            } else {
-              setIsSubmitting(false)
-            }
-          },
-          error_callback: () => {
-            setIsSubmitting(false)
-          },
-        })
-
-        client.requestAccessToken({ prompt: 'select_account' })
-        return
-      } catch (err) {
-        console.warn('[Google OAuth Token Client Error]:', err)
-      }
-    }
-
-    // 2. Google Identity Services One Tap Prompt Fallback
-    if (googleClientId && window.google?.accounts?.id) {
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: async (response) => {
-          const res = await auth.loginWithGoogle(response.credential)
-          setIsSubmitting(false)
-          if (res.success) {
-            setSuccessMessage(`Welcome back, ${res.user.name}! Authenticated with Google.`)
-            if (activeTab === 'create' && onSignUpSuccess) {
-              onSignUpSuccess(res.user)
-            } else if (onLoginSuccess) {
-              onLoginSuccess(res.user)
-            }
-          } else {
-            setErrorMessage(res.error || 'Google authentication failed.')
-          }
-        },
-      })
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setIsSubmitting(false)
-        }
-      })
+    if (!googleClientId) {
+      setIsSubmitting(false)
+      setErrorMessage('Google Sign-In is not configured.')
       return
     }
 
-    setIsSubmitting(false)
-    setErrorMessage('Google Sign-In is initializing. Please try again.')
+    // Wait for Google Identity Services script to load
+    if (!window.google?.accounts?.id) {
+      setIsSubmitting(false)
+      setErrorMessage('Google Sign-In is still loading. Please try again in a moment.')
+      return
+    }
+
+    // Use GIS credential flow (ID token via One Tap / popup)
+    // This avoids COOP (Cross-Origin-Opener-Policy) issues that block
+    // the oauth2.initTokenClient popup on Vercel deployments
+    try {
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (response) => {
+          if (!response?.credential) {
+            setIsSubmitting(false)
+            setErrorMessage('Google did not provide credentials. Please try again.')
+            return
+          }
+
+          try {
+            const res = await auth.loginWithGoogle(response.credential)
+            setIsSubmitting(false)
+            if (res.success) {
+              setSuccessMessage(`Welcome, ${res.user.name}! Authenticated with Google.`)
+              if (activeTab === 'create' && onSignUpSuccess) {
+                onSignUpSuccess(res.user)
+              } else if (onLoginSuccess) {
+                onLoginSuccess(res.user)
+              }
+            } else {
+              setErrorMessage(res.error || 'Google authentication failed.')
+            }
+          } catch (err) {
+            setIsSubmitting(false)
+            setErrorMessage(err.message || 'Google authentication failed.')
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: true,
+      })
+
+      // Try One Tap prompt first, fallback to manual button popup
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // One Tap was blocked/skipped — try oauth2 token flow as fallback
+          if (window.google?.accounts?.oauth2) {
+            try {
+              const client = window.google.accounts.oauth2.initTokenClient({
+                client_id: googleClientId,
+                scope: 'email profile openid',
+                callback: async (tokenResponse) => {
+                  if (tokenResponse?.access_token) {
+                    try {
+                      const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                        headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+                      }).then((r) => r.json())
+
+                      if (!userInfo.email) {
+                        setIsSubmitting(false)
+                        setErrorMessage('Google did not provide an email address.')
+                        return
+                      }
+
+                      const res = await auth.loginWithGoogle({
+                        email: userInfo.email,
+                        name: userInfo.name || userInfo.email.split('@')[0],
+                        avatar: userInfo.picture || '',
+                      })
+
+                      setIsSubmitting(false)
+                      if (res.success) {
+                        setSuccessMessage(`Welcome, ${res.user.name}! Authenticated with Google.`)
+                        if (activeTab === 'create' && onSignUpSuccess) {
+                          onSignUpSuccess(res.user)
+                        } else if (onLoginSuccess) {
+                          onLoginSuccess(res.user)
+                        }
+                      } else {
+                        setErrorMessage(res.error || 'Google authentication failed.')
+                      }
+                    } catch {
+                      setIsSubmitting(false)
+                      setErrorMessage('Failed to retrieve Google profile information.')
+                    }
+                  } else {
+                    setIsSubmitting(false)
+                  }
+                },
+                error_callback: () => {
+                  setIsSubmitting(false)
+                  setErrorMessage('Google Sign-In was cancelled or failed. Please try again.')
+                },
+              })
+
+              client.requestAccessToken({ prompt: 'select_account' })
+            } catch {
+              setIsSubmitting(false)
+              setErrorMessage('Google Sign-In popup could not be opened. Please try again.')
+            }
+          } else {
+            setIsSubmitting(false)
+            setErrorMessage('Google Sign-In is not available. Please try again or use email login.')
+          }
+        }
+      })
+    } catch (err) {
+      setIsSubmitting(false)
+      setErrorMessage('Google Sign-In encountered an error. Please try again.')
+    }
   }
 
 

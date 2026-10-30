@@ -46,7 +46,7 @@ export const COLLECTIONS_DATA = [
     badge: '🔥 TRENDING APPAREL',
     ctaText: 'Browse Apparel',
     subTag: '500+ GSM FLEECE',
-    productId: 'cross-hoodie',
+    productId: 'deal-2',
     category: 'streetwear-essentials',
     image:
       'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80',
@@ -88,7 +88,7 @@ export const COLLECTIONS_DATA = [
     badge: '🛡 VAULT ESSENTIALS',
     ctaText: 'Protect Grails',
     subTag: 'ECO-BIO CLEANERS',
-    productId: 'cross-cleaner',
+    productId: 'deal-4',
     category: 'limited-drops-care',
     image:
       'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80',
@@ -112,7 +112,7 @@ export const FEATURED_LANDING_COLLECTIONS = [
     badgeClass: 'bg-white/90 text-neutral-900',
     title: 'APPAREL',
     subtitle: 'Heavyweight Premium terry hoodies & track pants.',
-    productId: 'cross-hoodie',
+    productId: 'deal-2',
     image: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80',
   },
   {
@@ -121,7 +121,7 @@ export const FEATURED_LANDING_COLLECTIONS = [
     badgeClass: 'bg-white/90 text-neutral-900',
     title: 'ACCESSORIES',
     subtitle: 'Crossbody bags, caps, socks & shoe care kits.',
-    productId: 'cross-cleaner',
+    productId: 'deal-3',
     image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80',
   },
   {

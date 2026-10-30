@@ -105,7 +105,9 @@ const seedDatabase = async () => {
       },
       subtotal: o.total || 210,
       totalAmount: o.total || 210,
-      status: o.status || 'Confirmed',
+      status: ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].includes(o.status)
+        ? o.status
+        : 'Confirmed',
       trackingNumber: o.tracking || 'DEV-TRK-88912',
     }))
 
