@@ -1,4 +1,5 @@
 import { X, ShoppingBag, Trash2, ArrowRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export default function CartDrawer({
   isOpen,
@@ -7,7 +8,18 @@ export default function CartDrawer({
   onRemoveItem,
   onCheckout
 }) {
+  const navigate = useNavigate()
+
   if (!isOpen) return null
+
+  const handleProceedToCheckout = () => {
+    if (onClose) onClose()
+    if (onCheckout) {
+      onCheckout()
+    } else {
+      navigate('/checkout')
+    }
+  }
 
   const subtotal = Number(
     items.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0)
@@ -102,7 +114,7 @@ export default function CartDrawer({
 
             <button
               type="button"
-              onClick={() => onCheckout && onCheckout()}
+              onClick={handleProceedToCheckout}
               aria-label={`Proceed to checkout with subtotal of $${subtotal}`}
               className="w-full py-3 bg-[#c81d25] hover:bg-[#a5151c] text-white font-bold rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
             >

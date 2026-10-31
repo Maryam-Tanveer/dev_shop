@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, PackageCheck, ArrowRight, X } from 'lucide-react'
 import Navbar from '../../Components/Navbar'
@@ -288,7 +288,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
                 email={contactInfo.email}
                 phone={contactInfo.phone}
                 onChange={setContactInfo}
-                onLoginClick={() => onNavigate && onNavigate('LOGIN')}
+                onLoginClick={() => (onNavigate ? onNavigate('LOGIN') : navigate('/login'))}
               />
 
               <ShippingAddressCard
@@ -310,7 +310,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
               <OrderBreakdownCard
                 items={items}
                 shippingCost={shippingCost}
-                onEditBag={() => onNavigate && onNavigate('CART')}
+                onEditBag={() => (onNavigate ? onNavigate('CART') : navigate('/cart'))}
                 onApplyPromo={(amount, code) => {
                   setDiscountAmount(amount)
                   showToast(`Promo ${code} applied: -$${amount}`)
