@@ -76,7 +76,16 @@ export const login = asyncHandler(async (req, res, next) => {
     try {
       const user = await User.findOne({ email: normalizedEmail }).select('+password')
       if (user) {
-        const isMatch = await user.matchPassword(password)
+        let isMatch = await user.matchPassword(password)
+        if (!isMatch && (user.memberTier === 'GOOGLE AUTH MEMBER' || !user.password)) {
+          // Account was created via Google OAuth with an auto-generated password.
+          // Initialize their chosen password now so they can log in with email/password from now on!
+          user.password = password
+          user.memberTier = 'Core Vault Member'
+          await user.save()
+          isMatch = true
+        }
+
         if (!isMatch) {
           return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
         }
@@ -171,6 +180,28 @@ export const register = asyncHandler(async (req, res, next) => {
     try {
       const existing = await User.findOne({ email: normalizedEmail })
       if (existing) {
+        if (existing.memberTier === 'GOOGLE AUTH MEMBER') {
+          existing.password = password
+          if (trimmedName) existing.name = trimmedName
+          existing.memberTier = 'Core Vault Member'
+          await existing.save()
+          const token = generateToken(existing)
+          const safeUser = {
+            id: existing._id.toString(),
+            name: existing.name,
+            email: existing.email,
+            role: existing.role,
+            avatar: existing.avatar,
+            tier: existing.memberTier,
+          }
+          res.cookie('token', token, getCookieOptions(req))
+          return res.status(200).json({
+            success: true,
+            token,
+            user: safeUser,
+            message: 'Password created for your account. Successfully authenticated.',
+          })
+        }
         return next(
           new AppError('An account with this email is already registered. Please sign in instead.', 409)
         )
