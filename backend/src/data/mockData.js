@@ -165,7 +165,7 @@ export const ALL_PRODUCTS = [
   }
 ]
 
-export const COLLECTIONS = [
+export const FEATURED_LANDING_COLLECTIONS = [
   {
     id: 'col-1',
     badge: '1,600+ MODELS',
