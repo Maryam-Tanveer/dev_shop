@@ -165,40 +165,6 @@ export const ALL_PRODUCTS = [
   }
 ]
 
-export const FEATURED_LANDING_COLLECTIONS = [
-  {
-    id: 'col-1',
-    badge: '1,600+ MODELS',
-    title: 'SNEAKERS',
-    subtitle: 'Retro, runners, skate silhouettes & grails.',
-    productId: 'deal-1',
-    image: 'https://images.unsplash.com/photo-1514989940723-e8e51635b782?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: 'col-2',
-    badge: 'NEW SEASON',
-    title: 'APPAREL',
-    subtitle: 'Heavyweight Premium terry hoodies & track pants.',
-    productId: 'deal-2',
-    image: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: 'col-3',
-    badge: 'DAILY GEAR',
-    title: 'ACCESSORIES',
-    subtitle: 'Crossbody bags, caps, socks & shoe care kits.',
-    productId: 'deal-3',
-    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: 'col-4',
-    badge: 'RAFFLE VAULT',
-    title: 'LIMITED DROPS',
-    subtitle: 'Verified releases and deadstock archival lots.',
-    productId: 'snowboard-liquid',
-    image: 'https://images.unsplash.com/photo-1512374382149-233c42b6a83b?auto=format&fit=crop&w=800&q=80'
-  }
-]
 
 export const BLOGS = [
   {
