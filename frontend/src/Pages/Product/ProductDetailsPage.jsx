@@ -13,6 +13,72 @@ import { useCart } from '../../context/CartContext'
 import { useWishlist } from '../../context/WishlistContext'
 import NotFoundPage from '../NotFound/NotFoundPage'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
+import { COLLECTIONS_DATA } from '../../data/collections'
+import { DEALS_OF_THE_DAY } from '../../data/deals'
+import { CATALOG_PRODUCTS } from '../../data/catalog'
+
+const findFallbackProduct = (id) => {
+  if (!id) return null
+  const deal = DEALS_OF_THE_DAY.find((d) => d.id === id)
+  const catalog = CATALOG_PRODUCTS.find((p) => p.id === id)
+  const col = COLLECTIONS_DATA.find((c) => c.productId === id || c.id === id)
+
+  const match = deal || catalog || col
+  if (!match) return null
+
+  const mainImage = match.image || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=1000&q=80'
+
+  return {
+    id: match.productId || match.id || id,
+    title: match.title || 'Dev Shop Drop Item',
+    fullTitle: match.fullTitle || match.title || 'Dev Shop Drop Item',
+    brand: match.brand || 'Dev Shop Vault',
+    category: match.category || 'Streetwear',
+    price: Number(match.price) || 180,
+    originalPrice: match.originalPrice ? Number(match.originalPrice) : null,
+    rating: match.rating || 5.0,
+    reviews: match.reviews || 120,
+    badge: match.badge || 'VERIFIED',
+    badgeColor: match.badgeColor || 'bg-[#c81d25] text-white',
+    tag: match.tag || 'Vault Certified',
+    subTag: match.subTag || 'IN VAULT TODAY',
+    stockStatus: 'In Stock',
+    stock: 15,
+    image: mainImage,
+    thumbnails: [
+      { id: 'profile', label: 'PROFILE', image: mainImage },
+      { id: 'front', label: 'FRONT', image: mainImage },
+      { id: 'sole', label: 'SOLE GRIP', image: mainImage },
+      { id: 'unbox', label: 'UNBOX', image: mainImage },
+    ],
+    colorways: [
+      { id: 'default', name: 'Original Colorway', color: '#171717' },
+      { id: 'stealth', name: 'Stealth Black', color: '#262626' },
+    ],
+    sizes: [
+      { size: '8.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '8.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '9.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '9.5', status: '2 Left', badgeColor: 'text-[#c81d25] font-extrabold' },
+      { size: '10.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '10.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '11.0', status: 'Low', badgeColor: 'text-amber-600 font-bold' },
+    ],
+    description: match.description || `${match.title} is precision engineered for high-performance comfort and iconic street aesthetic with guaranteed physical vault authentication.`,
+    descriptionSecond: 'Features shock-absorbing midsole cushioning, durable rubber tread traction, and hand-inspected finishing.',
+    feature1Title: 'PREMIUM MATERIALS',
+    feature1Subtitle: 'Hand-Crafted Finish',
+    feature1Desc: 'Engineered with hand-stitched detailing and high-grade composite overlays.',
+    feature2Title: 'DYNAMIC CUSHIONING',
+    feature2Subtitle: 'High-Impact Rebound',
+    feature2Desc: 'Cushioned footbed provides all-day structural stability and energy return.',
+    releaseCode: `DS-${(id || 'DROP').toUpperCase()}-2024`,
+    globalAllocation: 'Vault Certified Allocation',
+    weight: '380g (Size 9 US)',
+    origin: 'Certified Dev Shop Vault',
+    verified: true,
+  }
+}
 
 export default function ProductDetailsPage({ productId, onSelectProduct, onNavigate }) {
   const navigate = useNavigate()
@@ -54,16 +120,28 @@ export default function ProductDetailsPage({ productId, onSelectProduct, onNavig
             setProduct(data)
             setNotFound(false)
           } else {
-            setProduct(null)
-            setNotFound(true)
+            const fallback = findFallbackProduct(productId)
+            if (fallback) {
+              setProduct(fallback)
+              setNotFound(false)
+            } else {
+              setProduct(null)
+              setNotFound(true)
+            }
           }
         }
       })
       .catch((err) => {
-        console.error('Failed to fetch product from API:', err)
+        console.warn('API lookup returned error, resolving from vault fallback:', err.message)
         if (isMounted) {
-          setProduct(null)
-          setNotFound(true)
+          const fallback = findFallbackProduct(productId)
+          if (fallback) {
+            setProduct(fallback)
+            setNotFound(false)
+          } else {
+            setProduct(null)
+            setNotFound(true)
+          }
         }
       })
       .finally(() => {

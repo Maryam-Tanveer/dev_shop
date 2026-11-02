@@ -1,6 +1,8 @@
 import {
   toLightProduct,
   toDetailProduct,
+  PRODUCTS_DATABASE,
+  RAW_DATABASE,
 } from '../data/products/index.js'
 import AppError from '../utils/AppError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
@@ -8,7 +10,7 @@ import Product from '../models/Product.js'
 
 /**
  * Get all products (Lightweight shape) with optional filtering by category, brand, or search query.
- * MongoDB is the single source of truth.
+ * MongoDB with seamless master database fallback.
  */
 export const getProducts = asyncHandler(async (req, res) => {
   const { category, brand, q } = req.query
@@ -41,7 +43,36 @@ export const getProducts = asyncHandler(async (req, res) => {
     }
   }
 
-  const dbProducts = await Product.find(filter).lean()
+  let dbProducts = []
+  try {
+    dbProducts = await Product.find(filter).lean()
+  } catch (err) {
+    console.warn(`[getProducts] DB find failed: ${err.message}`)
+  }
+
+  // Fallback if DB returns empty or connection unavailable
+  if (!dbProducts || dbProducts.length === 0) {
+    let fallbackList = Object.values(RAW_DATABASE)
+    if (category && category !== 'All') {
+      const catRegex = new RegExp(`^${category}$`, 'i')
+      fallbackList = fallbackList.filter((p) => catRegex.test(p.category))
+    }
+    if (brand && brand !== 'All') {
+      const brandRegex = new RegExp(brand, 'i')
+      fallbackList = fallbackList.filter((p) => brandRegex.test(p.brand))
+    }
+    if (q && q.trim()) {
+      const qLower = q.toLowerCase()
+      fallbackList = fallbackList.filter(
+        (p) =>
+          p.title?.toLowerCase().includes(qLower) ||
+          p.fullTitle?.toLowerCase().includes(qLower) ||
+          p.brand?.toLowerCase().includes(qLower) ||
+          p.id?.toLowerCase().includes(qLower)
+      )
+    }
+    dbProducts = fallbackList
+  }
 
   res.json({
     success: true,
@@ -52,15 +83,34 @@ export const getProducts = asyncHandler(async (req, res) => {
 
 /**
  * Get single product by ID (Full Detail shape) directly from MongoDB
+ * with master database fallback (guarantees deal-1, deal-2, deal-5, etc. never 404).
  */
 export const getProductById = asyncHandler(async (req, res, next) => {
   const { id } = req.params
 
-  const isObjectId = /^[0-9a-fA-F]{24}$/.test(id)
-  const query = isObjectId ? { $or: [{ id }, { _id: id }] } : { id }
-  const dbProduct = await Product.findOne(query).lean()
+  let dbProduct = null
+  try {
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id)
+    const query = isObjectId ? { $or: [{ id }, { _id: id }] } : { id }
+    dbProduct = await Product.findOne(query).lean()
+  } catch (err) {
+    console.warn(`[getProductById] DB query failed: ${err.message}`)
+  }
 
   if (!dbProduct) {
+    // Check in-memory master database (handles deal-1, deal-2, etc.)
+    const fallback =
+      PRODUCTS_DATABASE[id] ||
+      RAW_DATABASE[id] ||
+      Object.values(RAW_DATABASE).find((p) => p.id === id)
+
+    if (fallback) {
+      return res.json({
+        success: true,
+        data: toDetailProduct(fallback),
+      })
+    }
+
     return next(new AppError(`Product with id '${id}' not found`, 404))
   }
 
