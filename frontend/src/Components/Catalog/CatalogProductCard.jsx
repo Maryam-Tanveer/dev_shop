@@ -95,11 +95,11 @@ export default function CatalogProductCard({
       <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
         <div className="flex items-baseline gap-2">
           <span className="text-base sm:text-lg font-black text-[#c81d25]">
-            ${price.toFixed(2)}
+            ${Number(price || 0).toFixed(2)}
           </span>
           {originalPrice && (
             <span className="text-xs text-neutral-400 line-through">
-              ${originalPrice.toFixed(2)}
+              ${Number(originalPrice).toFixed(2)}
             </span>
           )}
         </div>

@@ -3,13 +3,20 @@ import { X, ChevronDown } from 'lucide-react'
 export default function CatalogActiveFilters({
   collection = 'All',
   onRemoveCollection,
-  sizes = ['9', '9.5'],
+  sizes = [],
   onRemoveSizes,
+  brands = [],
+  onRemoveBrands,
   priceRange = [50, 800],
   onResetPrice,
   sortBy = 'Featured',
   onSortChange
 }) {
+  const isCustomPrice =
+    Array.isArray(priceRange) &&
+    priceRange.length === 2 &&
+    (priceRange[0] > 0 || priceRange[1] < 1000)
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-white sm:bg-transparent p-4 sm:p-0 rounded-2xl border sm:border-0 border-neutral-200">
       {/* Active Tags */}
@@ -19,13 +26,13 @@ export default function CatalogActiveFilters({
         </span>
 
         {/* Collection Tag */}
-        {collection && (
+        {collection && collection !== 'All' && (
           <span className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-[#c81d25] text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
             <span>Collection: {collection}</span>
             <button
               type="button"
               onClick={onRemoveCollection}
-              className="hover:text-neutral-900 transition"
+              className="hover:text-neutral-900 transition cursor-pointer"
               title="Remove collection filter"
             >
               <X className="w-3 h-3 stroke-[2.5]" />
@@ -40,7 +47,7 @@ export default function CatalogActiveFilters({
             <button
               type="button"
               onClick={onRemoveSizes}
-              className="hover:text-[#c81d25] transition"
+              className="hover:text-[#c81d25] transition cursor-pointer"
               title="Remove size filter"
             >
               <X className="w-3 h-3 stroke-[2.5]" />
@@ -48,14 +55,29 @@ export default function CatalogActiveFilters({
           </span>
         )}
 
+        {/* Brands Tag */}
+        {brands && brands.length > 0 && (
+          <span className="inline-flex items-center gap-1.5 bg-neutral-100 border border-neutral-200 text-neutral-800 text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
+            <span className="capitalize">Brand: {brands.join(', ')}</span>
+            <button
+              type="button"
+              onClick={onRemoveBrands}
+              className="hover:text-[#c81d25] transition cursor-pointer"
+              title="Remove brand filter"
+            >
+              <X className="w-3 h-3 stroke-[2.5]" />
+            </button>
+          </span>
+        )}
+
         {/* Price Tag */}
-        {priceRange && (
+        {isCustomPrice && (
           <span className="inline-flex items-center gap-1.5 bg-neutral-100 border border-neutral-200 text-neutral-800 text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
             <span>${priceRange[0]} – ${priceRange[1]}</span>
             <button
               type="button"
               onClick={onResetPrice}
-              className="hover:text-[#c81d25] transition"
+              className="hover:text-[#c81d25] transition cursor-pointer"
               title="Reset price filter"
             >
               <X className="w-3 h-3 stroke-[2.5]" />

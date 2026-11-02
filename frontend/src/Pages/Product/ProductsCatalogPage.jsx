@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { SlidersHorizontal } from 'lucide-react'
 import Navbar from '../../Components/Navbar'
 import Footer from '../../Components/Footer'
 import CartDrawer from '../../Components/CartDrawer'
@@ -17,9 +18,9 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
   const { wishlistMap, toggleWishlist, wishlistCount } = useWishlist()
   const [selectedCollection, setSelectedCollection] = useState('All')
-  const [selectedSizes, setSelectedSizes] = useState(['9', '9.5'])
+  const [selectedSizes, setSelectedSizes] = useState([])
   const [priceRange, setPriceRange] = useState([50, 800])
-  const [selectedBrands, setSelectedBrands] = useState(['nike', 'jordan'])
+  const [selectedBrands, setSelectedBrands] = useState([])
   const [sortBy, setSortBy] = useState('Featured')
   const {
     items: cart,
@@ -58,6 +59,59 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
     }
   }, [selectedCollection])
 
+  // Dynamically filter and sort products based on all active criteria
+  const filteredProducts = useMemo(() => {
+    let list = Array.isArray(products) ? [...products] : []
+
+    // 1. Price Range filter
+    if (Array.isArray(priceRange) && priceRange.length === 2) {
+      const [min, max] = priceRange
+      list = list.filter((p) => {
+        const price = Number(p.price) || 0
+        return price >= min && price <= max
+      })
+    }
+
+    // 2. Brand filter
+    if (selectedBrands && selectedBrands.length > 0) {
+      list = list.filter((p) => {
+        const brandStr = (p.brand || '').toLowerCase()
+        const titleStr = (p.title || '').toLowerCase()
+        const fullTitleStr = (p.fullTitle || '').toLowerCase()
+        return selectedBrands.some((b) => {
+          const bLower = b.toLowerCase()
+          return (
+            brandStr.includes(bLower) ||
+            titleStr.includes(bLower) ||
+            fullTitleStr.includes(bLower)
+          )
+        })
+      })
+    }
+
+    // 3. Size filter
+    if (selectedSizes && selectedSizes.length > 0) {
+      list = list.filter((p) => {
+        if (!p.sizes || p.sizes.length === 0) return true
+        const pSizes = p.sizes.map((s) => String(s).trim())
+        return selectedSizes.some((s) => pSizes.includes(String(s).trim()))
+      })
+    }
+
+    // 4. Sort By
+    if (sortBy === 'Price: Low to High') {
+      list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+    } else if (sortBy === 'Price: High to Low') {
+      list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
+    } else if (sortBy === 'Newest Drops') {
+      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    } else if (sortBy === 'Most Hyped') {
+      list.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0))
+    }
+
+    return list
+  }, [products, priceRange, selectedBrands, selectedSizes, sortBy])
+
   const showToast = (message) => {
     setToast(message)
     setTimeout(() => setToast(null), 2500)
@@ -84,7 +138,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const handleClearAll = () => {
     setSelectedCollection('All')
     setSelectedSizes([])
-    setPriceRange([50, 800])
+    setPriceRange([0, 1000])
     setSelectedBrands([])
     showToast('Filters cleared')
   }
@@ -145,7 +199,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
       <main className="flex-1 pb-16">
         {/* Catalog Header */}
         <CatalogHeader
-          itemCount={48}
+          itemCount={filteredProducts.length}
           onBackToHome={() => onNavigate && onNavigate('HOME')}
         />
 
@@ -174,8 +228,10 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
                 onRemoveCollection={() => setSelectedCollection('All')}
                 sizes={selectedSizes}
                 onRemoveSizes={() => setSelectedSizes([])}
+                brands={selectedBrands}
+                onRemoveBrands={() => setSelectedBrands([])}
                 priceRange={priceRange}
-                onResetPrice={() => setPriceRange([50, 800])}
+                onResetPrice={() => setPriceRange([0, 1000])}
                 sortBy={sortBy}
                 onSortChange={setSortBy}
               />
@@ -188,9 +244,30 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
                     Connecting to Drop Vault API...
                   </p>
                 </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="py-16 px-6 bg-white rounded-3xl border border-neutral-200 text-center flex flex-col items-center justify-center shadow-xs">
+                  <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center text-[#c81d25] mb-4">
+                    <SlidersHorizontal className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-neutral-900 mb-2">
+                    No drops found in this price range
+                  </h3>
+                  <p className="text-xs text-neutral-500 max-w-md mb-6 leading-relaxed">
+                    No items in our vault match the price range{' '}
+                    <strong className="text-neutral-900">${priceRange[0]} – ${priceRange[1]}</strong>.
+                    Try widening the price range or resetting your active filters.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="px-6 py-2.5 bg-[#c81d25] hover:bg-[#a6171e] text-white text-xs font-extrabold uppercase tracking-wider rounded-xl transition shadow-xs cursor-pointer active:scale-95"
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {products.slice(0, visibleCount).map((product) => (
+                  {filteredProducts.slice(0, visibleCount).map((product) => (
                     <CatalogProductCard
                       key={product.id}
                       product={product}
@@ -203,14 +280,16 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
               )}
 
               {/* Pagination / Load More */}
-              <CatalogPagination
-                currentCount={visibleCount}
-                totalCount={48}
-                onLoadMore={() => {
-                  setVisibleCount((prev) => Math.min(48, prev + 6))
-                  showToast('Loaded more drop inventory!')
-                }}
-              />
+              {filteredProducts.length > visibleCount && (
+                <CatalogPagination
+                  currentCount={Math.min(visibleCount, filteredProducts.length)}
+                  totalCount={filteredProducts.length}
+                  onLoadMore={() => {
+                    setVisibleCount((prev) => Math.min(filteredProducts.length, prev + 6))
+                    showToast('Loaded more drop inventory!')
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>

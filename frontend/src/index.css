@@ -29,3 +29,48 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: #b3aca0;
 }
+
+/* Dual Range Slider Styles */
+.dev-range-slider {
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.dev-range-slider::-webkit-slider-thumb {
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  border: 3px solid #c81d25;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.dev-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 2px 8px rgba(200, 29, 37, 0.4);
+}
+.dev-range-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.25);
+}
+.dev-range-slider::-moz-range-thumb {
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  border: 3px solid #c81d25;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.dev-range-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+.dev-range-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+}
