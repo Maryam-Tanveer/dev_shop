@@ -17,11 +17,34 @@ export const getProducts = asyncHandler(async (req, res) => {
   const filter = {}
 
   if (category && category !== 'All') {
-    filter.category = new RegExp(`^${category}$`, 'i')
+    if (/home\s*page/i.test(category)) {
+      // Home page shows all primary vault drops
+    } else if (/top\s*best\s*deals/i.test(category)) {
+      filter.$or = [
+        { originalPrice: { $gt: 0 } },
+        { badge: /OFF|SALE|DEAL/i },
+        { id: /^deal-/i },
+      ]
+    } else if (/automated\s*collection/i.test(category)) {
+      filter.$or = [
+        { category: /Automated Collection/i },
+        { brand: /EXCLUSIVE WINTER|NIKE LAB/i },
+        { id: /snowboard/i },
+      ]
+    } else if (/hydrogen/i.test(category)) {
+      filter.$or = [
+        { category: /Hydrogen/i },
+        { brand: /ASICS|SPECIAL EDITION/i },
+      ]
+    } else {
+      filter.category = new RegExp(category, 'i')
+    }
   }
+
   if (brand && brand !== 'All') {
     filter.brand = new RegExp(brand, 'i')
   }
+
   if (q && q.trim()) {
     const raw = q.trim()
     const tokens = raw.split(/\s+/).filter(Boolean)
@@ -54,12 +77,28 @@ export const getProducts = asyncHandler(async (req, res) => {
   if (!dbProducts || dbProducts.length === 0) {
     let fallbackList = Object.values(RAW_DATABASE)
     if (category && category !== 'All') {
-      const catRegex = new RegExp(`^${category}$`, 'i')
-      fallbackList = fallbackList.filter((p) => catRegex.test(p.category))
+      if (/top\s*best\s*deals/i.test(category)) {
+        fallbackList = fallbackList.filter(
+          (p) => p.originalPrice || (p.badge && /OFF|SALE|DEAL/i.test(p.badge)) || (p.id && p.id.startsWith('deal-'))
+        )
+      } else if (/automated\s*collection/i.test(category)) {
+        fallbackList = fallbackList.filter(
+          (p) => /Automated Collection/i.test(p.category) || /snowboard/i.test(p.id) || /EXCLUSIVE WINTER/i.test(p.brand)
+        )
+      } else if (/hydrogen/i.test(category)) {
+        fallbackList = fallbackList.filter(
+          (p) => /Hydrogen/i.test(p.category) || /ASICS|SPECIAL/i.test(p.brand)
+        )
+      } else if (!/home\s*page/i.test(category)) {
+        const catRegex = new RegExp(category, 'i')
+        const matched = fallbackList.filter((p) => catRegex.test(p.category))
+        if (matched.length > 0) fallbackList = matched
+      }
     }
     if (brand && brand !== 'All') {
       const brandRegex = new RegExp(brand, 'i')
-      fallbackList = fallbackList.filter((p) => brandRegex.test(p.brand))
+      const matched = fallbackList.filter((p) => brandRegex.test(p.brand))
+      if (matched.length > 0) fallbackList = matched
     }
     if (q && q.trim()) {
       const qLower = q.toLowerCase()

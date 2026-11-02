@@ -13,6 +13,7 @@ import { useCart } from '../../context/CartContext'
 import { useWishlist } from '../../context/WishlistContext'
 import { api } from '../../services/api'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
+import { CATALOG_PRODUCTS } from '../../data/catalog'
 
 export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
@@ -20,7 +21,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const { wishlistMap, toggleWishlist, wishlistCount } = useWishlist()
   const [selectedCollection, setSelectedCollection] = useState('All')
   const [selectedSizes, setSelectedSizes] = useState([])
-  const [priceRange, setPriceRange] = useState([50, 800])
+  const [priceRange, setPriceRange] = useState([0, 1000])
   const [selectedBrands, setSelectedBrands] = useState([])
   const [sortBy, setSortBy] = useState('Featured')
   const {
@@ -35,8 +36,8 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const [activeNav, setActiveNav] = useState('PRODUCTS')
   const [toast, setToast] = useState(null)
   const [visibleCount, setVisibleCount] = useState(6)
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState(CATALOG_PRODUCTS)
+  const [loading, setLoading] = useState(false)
 
   // Keep search query in sync with URL ?search= param
   useEffect(() => {
@@ -52,12 +53,30 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
     api
       .getProducts({ category: selectedCollection })
       .then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setProducts(data)
+        if (isMounted) {
+          if (Array.isArray(data) && data.length > 0) {
+            setProducts(data)
+          } else {
+            // Smart local fallback so catalog is never empty
+            let fallback = [...CATALOG_PRODUCTS]
+            if (selectedCollection && selectedCollection !== 'All') {
+              if (/top\s*best\s*deals/i.test(selectedCollection)) {
+                fallback = fallback.filter((p) => p.originalPrice || (p.badge && /OFF|SALE|DEAL/i.test(p.badge)) || (p.id && p.id.startsWith('deal-')))
+              } else if (/automated\s*collection/i.test(selectedCollection)) {
+                fallback = fallback.filter((p) => /Automated Collection/i.test(p.category) || /snowboard/i.test(p.id))
+              } else if (/hydrogen/i.test(selectedCollection)) {
+                fallback = fallback.filter((p) => /Hydrogen/i.test(p.category) || /asics|special/i.test(p.brand))
+              }
+            }
+            setProducts(fallback.length > 0 ? fallback : CATALOG_PRODUCTS)
+          }
         }
       })
       .catch((err) => {
-        console.error('Failed to load products from API:', err)
+        console.warn('Failed to load products from API, using catalog items:', err.message)
+        if (isMounted) {
+          setProducts(CATALOG_PRODUCTS)
+        }
       })
       .finally(() => {
         if (isMounted) setLoading(false)
@@ -70,7 +89,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
 
   // Dynamically filter and sort products based on all active criteria
   const filteredProducts = useMemo(() => {
-    let list = Array.isArray(products) ? [...products] : []
+    let list = Array.isArray(products) && products.length > 0 ? [...products] : [...CATALOG_PRODUCTS]
 
     // 0. Search Query filter (matches title, fullTitle, brand, category, description, id)
     if (searchQuery && searchQuery.trim()) {
@@ -81,12 +100,14 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
       })
     }
 
-    // 1. Price Range filter
+    // 1. Price Range filter (allow open-ended max for grails when max >= 1000)
     if (Array.isArray(priceRange) && priceRange.length === 2) {
       const [min, max] = priceRange
+      const effectiveMin = Number(min) || 0
+      const effectiveMax = Number(max) >= 1000 ? Infinity : Number(max)
       list = list.filter((p) => {
         const price = Number(p.price) || 0
-        return price >= min && price <= max
+        return price >= effectiveMin && price <= effectiveMax
       })
     }
 
