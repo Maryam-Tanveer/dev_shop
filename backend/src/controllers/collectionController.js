@@ -1,10 +1,15 @@
 import { COLLECTIONS } from '../data/mockData.js'
 
 export const getCollections = (req, res) => {
+  const { category } = req.query
+  let list = COLLECTIONS || []
+  if (category && category !== 'all') {
+    list = list.filter((c) => c.category === category)
+  }
   res.json({
     success: true,
-    count: COLLECTIONS.length,
-    data: COLLECTIONS
+    count: list.length,
+    data: list
   })
 }
 

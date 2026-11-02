@@ -112,6 +112,19 @@ export const api = {
   },
 
   /**
+   * Fetch curated collections matching category tabs
+   */
+  async getCollections(params = {}) {
+    const queryParams = new URLSearchParams()
+    if (params.category && params.category !== 'all') {
+      queryParams.append('category', params.category)
+    }
+    const qs = queryParams.toString() ? `?${queryParams.toString()}` : ''
+    const res = await request(`/collections${qs}`).catch(() => null)
+    return res?.data || []
+  },
+
+  /**
    * Fetch single product by ID directly from API
    */
   async getProductById(id) {
