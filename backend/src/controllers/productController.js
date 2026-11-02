@@ -21,8 +21,24 @@ export const getProducts = asyncHandler(async (req, res) => {
     filter.brand = new RegExp(brand, 'i')
   }
   if (q && q.trim()) {
-    const queryRegex = new RegExp(q.trim(), 'i')
-    filter.$or = [{ title: queryRegex }, { fullTitle: queryRegex }, { brand: queryRegex }]
+    const raw = q.trim()
+    const tokens = raw.split(/\s+/).filter(Boolean)
+    if (tokens.length > 0) {
+      filter.$and = tokens.map((token) => {
+        const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(escaped, 'i')
+        return {
+          $or: [
+            { title: regex },
+            { fullTitle: regex },
+            { brand: regex },
+            { category: regex },
+            { description: regex },
+            { id: regex },
+          ],
+        }
+      })
+    }
   }
 
   const dbProducts = await Product.find(filter).lean()

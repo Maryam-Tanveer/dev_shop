@@ -9,6 +9,8 @@ export default function CatalogActiveFilters({
   onRemoveBrands,
   priceRange = [50, 800],
   onResetPrice,
+  searchQuery = '',
+  onRemoveSearch,
   sortBy = 'Featured',
   onSortChange
 }) {
@@ -24,6 +26,21 @@ export default function CatalogActiveFilters({
         <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400 mr-1">
           ACTIVE:
         </span>
+
+        {/* Search Query Tag */}
+        {searchQuery && searchQuery.trim() && (
+          <span className="inline-flex items-center gap-1.5 bg-neutral-900 text-white text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
+            <span>Search: &ldquo;{searchQuery}&rdquo;</span>
+            <button
+              type="button"
+              onClick={onRemoveSearch}
+              className="hover:text-[#c81d25] transition cursor-pointer"
+              title="Remove search query"
+            >
+              <X className="w-3 h-3 stroke-[2.5]" />
+            </button>
+          </span>
+        )}
 
         {/* Collection Tag */}
         {collection && collection !== 'All' && (

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal } from 'lucide-react'
 import Navbar from '../../Components/Navbar'
 import Footer from '../../Components/Footer'
@@ -16,6 +16,7 @@ import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 
 export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { wishlistMap, toggleWishlist, wishlistCount } = useWishlist()
   const [selectedCollection, setSelectedCollection] = useState('All')
   const [selectedSizes, setSelectedSizes] = useState([])
@@ -30,12 +31,20 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
     openDrawer,
     closeDrawer,
   } = useCart()
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [activeNav, setActiveNav] = useState('PRODUCTS')
   const [toast, setToast] = useState(null)
   const [visibleCount, setVisibleCount] = useState(6)
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Keep search query in sync with URL ?search= param
+  useEffect(() => {
+    const urlSearch = searchParams.get('search')
+    if (urlSearch !== null && urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     let isMounted = true
@@ -62,6 +71,15 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   // Dynamically filter and sort products based on all active criteria
   const filteredProducts = useMemo(() => {
     let list = Array.isArray(products) ? [...products] : []
+
+    // 0. Search Query filter (matches title, fullTitle, brand, category, description, id)
+    if (searchQuery && searchQuery.trim()) {
+      const qTokens = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean)
+      list = list.filter((p) => {
+        const text = `${p.title || ''} ${p.fullTitle || ''} ${p.brand || ''} ${p.category || ''} ${p.description || ''} ${p.id || ''}`.toLowerCase()
+        return qTokens.every((token) => text.includes(token))
+      })
+    }
 
     // 1. Price Range filter
     if (Array.isArray(priceRange) && priceRange.length === 2) {
@@ -110,7 +128,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
     }
 
     return list
-  }, [products, priceRange, selectedBrands, selectedSizes, sortBy])
+  }, [products, searchQuery, priceRange, selectedBrands, selectedSizes, sortBy])
 
   const showToast = (message) => {
     setToast(message)
@@ -140,6 +158,8 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
     setSelectedSizes([])
     setPriceRange([0, 1000])
     setSelectedBrands([])
+    setSearchQuery('')
+    setSearchParams({})
     showToast('Filters cleared')
   }
 
@@ -190,7 +210,10 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
         onOpenCart={openDrawer}
         wishlistCount={wishlistCount}
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={(q) => {
+          setSearchQuery(q)
+          setSearchParams(q ? { search: q } : {})
+        }}
         activeNav={activeNav}
         onNavClick={handleNavClick}
         onSelectProduct={onSelectProduct}
@@ -232,6 +255,15 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
                 onRemoveBrands={() => setSelectedBrands([])}
                 priceRange={priceRange}
                 onResetPrice={() => setPriceRange([0, 1000])}
+                searchQuery={searchQuery}
+                onRemoveSearch={() => {
+                  setSearchQuery('')
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev)
+                    next.delete('search')
+                    return next
+                  })
+                }}
                 sortBy={sortBy}
                 onSortChange={setSortBy}
               />
@@ -250,12 +282,14 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
                     <SlidersHorizontal className="w-7 h-7" />
                   </div>
                   <h3 className="text-base sm:text-lg font-black text-neutral-900 mb-2">
-                    No drops found in this price range
+                    {searchQuery
+                      ? `No drops found for "${searchQuery}"`
+                      : 'No drops found matching criteria'}
                   </h3>
                   <p className="text-xs text-neutral-500 max-w-md mb-6 leading-relaxed">
-                    No items in our vault match the price range{' '}
-                    <strong className="text-neutral-900">${priceRange[0]} – ${priceRange[1]}</strong>.
-                    Try widening the price range or resetting your active filters.
+                    {searchQuery
+                      ? `We couldn't find any products matching "${searchQuery}". Try searching for terms like "Jordan 1", "Yeezy", "Snowboard", or "Nike".`
+                      : `No items in our vault match the price range $${priceRange[0]} – $${priceRange[1]}. Try widening the price range or resetting filters.`}
                   </p>
                   <button
                     type="button"
