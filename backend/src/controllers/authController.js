@@ -106,52 +106,54 @@ export const login = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Fallback to demo users in USERS
-  const demoUser = findUserByEmail(normalizedEmail)
-  if (demoUser) {
-    const isMatch = await comparePassword(password, demoUser.passwordHash)
-    if (isMatch) {
-      // If DB is connected, save the user into DB so it persists
-      if (dbStatus.connected) {
-        try {
-          const created = await User.create({
-            name: demoUser.name,
-            email: demoUser.email,
-            password: password,
-            role: demoUser.role || 'member',
-            avatar: demoUser.avatar || '',
-            memberTier: demoUser.tier || 'Core Vault Member',
-          })
-          const token = generateToken(created)
-          const safeUser = {
-            id: created._id.toString(),
-            name: created.name,
-            email: created.email,
-            role: created.role,
-            avatar: created.avatar,
-            tier: created.memberTier,
+  // Fallback to demo users in USERS (strictly permitted in development environment only)
+  if (process.env.NODE_ENV !== 'production') {
+    const demoUser = findUserByEmail(normalizedEmail)
+    if (demoUser) {
+      const isMatch = await comparePassword(password, demoUser.passwordHash)
+      if (isMatch) {
+        // If DB is connected, save the user into DB so it persists
+        if (dbStatus.connected) {
+          try {
+            const created = await User.create({
+              name: demoUser.name,
+              email: demoUser.email,
+              password: password,
+              role: demoUser.role || 'member',
+              avatar: demoUser.avatar || '',
+              memberTier: demoUser.tier || 'Core Vault Member',
+            })
+            const token = generateToken(created)
+            const safeUser = {
+              id: created._id.toString(),
+              name: created.name,
+              email: created.email,
+              role: created.role,
+              avatar: created.avatar,
+              tier: created.memberTier,
+            }
+            res.cookie('token', token, getCookieOptions(req))
+            return res.json({
+              success: true,
+              token,
+              user: safeUser,
+              message: 'Successfully authenticated.',
+            })
+          } catch {
+            // Continue to in-memory fallback
           }
-          res.cookie('token', token, getCookieOptions(req))
-          return res.json({
-            success: true,
-            token,
-            user: safeUser,
-            message: 'Successfully authenticated.',
-          })
-        } catch {
-          // Continue to in-memory fallback
         }
-      }
 
-      const token = generateToken(demoUser)
-      const safeUser = sanitizeUser(demoUser)
-      res.cookie('token', token, getCookieOptions(req))
-      return res.json({
-        success: true,
-        token,
-        user: safeUser,
-        message: 'Successfully authenticated.',
-      })
+        const token = generateToken(demoUser)
+        const safeUser = sanitizeUser(demoUser)
+        res.cookie('token', token, getCookieOptions(req))
+        return res.json({
+          success: true,
+          token,
+          user: safeUser,
+          message: 'Successfully authenticated.',
+        })
+      }
     }
   }
 
