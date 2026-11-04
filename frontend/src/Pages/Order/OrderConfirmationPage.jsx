@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { PackageX, ArrowLeft } from 'lucide-react'
 import Navbar from '../../Components/Navbar'
 import Footer from '../../Components/Footer'
 import CartDrawer from '../../Components/CartDrawer'
@@ -10,40 +11,43 @@ import OrderShippingDestination from '../../Components/OrderConfirmation/OrderSh
 import OrderSummarySidebar from '../../Components/OrderConfirmation/OrderSummarySidebar'
 import OrderHelpConcierge from '../../Components/OrderConfirmation/OrderHelpConcierge'
 import OrderTrackingModal from '../../Components/OrderTrackingModal'
+import { useCart } from '../../context/CartContext'
 import { api } from '../../services/api'
 
 export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { clearCart, cartCount } = useCart()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [toast, setToast] = useState(null)
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false)
 
-  const [activeOrder, setActiveOrder] = useState(
-    location.state?.order || {
-      orderNumber: 'DEV-8492019',
-      userEmail: 'collector@devshop.io',
-      shippingAddress: { firstName: 'Collector', lastName: 'Member', city: 'New York', state: 'NY' },
-      carrier: 'DHL Express Air Priority',
-      status: 'Confirmed',
-    }
+  const [activeOrder, setActiveOrder] = useState(location.state?.order || null)
+  const [isVerifying, setIsVerifying] = useState(
+    Boolean(new URLSearchParams(location.search).get('session_id'))
   )
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const sessionId = params.get('session_id')
     if (sessionId) {
+      setIsVerifying(true)
       api
         .verifyPaymentSession(sessionId)
         .then((res) => {
           if (res.success && res.order) {
             setActiveOrder(res.order)
+            clearCart()
             showToast('Stripe payment confirmed! Receipt dispatched.')
           }
         })
         .catch((err) => {
           console.warn('[Stripe session verify]:', err.message)
+          showToast('Payment verification failed or session expired.')
+        })
+        .finally(() => {
+          setIsVerifying(false)
         })
     }
   }, [location.search])
@@ -56,6 +60,8 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
   const handleNavClick = (navItem) => {
     if (onNavigate) {
       onNavigate(navItem)
+    } else {
+      navigate(navItem === 'HOME' ? '/' : `/${navItem.toLowerCase()}`)
     }
   }
 
@@ -87,7 +93,7 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
 
       {/* Navbar */}
       <Navbar
-        cartCount={0}
+        cartCount={cartCount}
         onOpenCart={() => setIsDrawerOpen(true)}
         wishlistCount={4}
         searchQuery={searchQuery}
@@ -108,67 +114,100 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
             Home
           </Link>
           <span className="mx-1.5">/</span>
-          <span className="text-neutral-800 font-semibold">Shop Experience</span>
+          <span className="text-neutral-800 font-semibold">Order Confirmation</span>
         </div>
 
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-8 w-full pt-2">
-          {/* Hero Confirmation Card */}
-          <OrderHeroConfirmation
-            orderNumber={activeOrder.orderNumber || 'DEV-8492019'}
-            customerName={activeOrder.shippingAddress?.firstName || 'Collector'}
-            estDelivery="Oct 28 – Oct 30"
-            trackingNumber={`DEV-EXP-${(activeOrder.orderNumber || '8492019').replace(/[^0-9]/g, '')}`}
-            paymentMethod="Vault Authenticated Checkout"
-          />
-
-          {/* 2-Column Content Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left 7 Columns: Tracking, Items, Shipping Destination */}
-            <div className="lg:col-span-7">
-              <OrderFulfillmentTracker
-                onViewDigitalPass={() => setIsTrackingModalOpen(true)}
-              />
-
-              <OrderPurchasedItems items={activeOrder.items} />
-
-              <OrderShippingDestination
-                shippingAddress={activeOrder.shippingAddress}
-                recipientName={
-                  activeOrder.shippingAddress?.fullName ||
-                  (activeOrder.shippingAddress?.firstName
-                    ? `${activeOrder.shippingAddress.firstName} ${activeOrder.shippingAddress.lastName || ''}`.trim()
-                    : null)
-                }
-                onAddGateCode={() => showToast('Gate code modal opened. Driver will be notified.')}
-              />
+        {isVerifying ? (
+          <div className="max-w-md mx-auto py-24 text-center px-4">
+            <div className="w-12 h-12 border-4 border-[#c81d25] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <h2 className="text-xl font-black text-neutral-900 tracking-tight">
+              Verifying Stripe Payment...
+            </h2>
+            <p className="text-xs text-neutral-500 mt-2 font-medium">
+              Authenticating multi-point payment signature with Stripe vault.
+            </p>
+          </div>
+        ) : !activeOrder ? (
+          <div className="max-w-md mx-auto py-24 text-center px-4">
+            <div className="w-16 h-16 rounded-3xl bg-neutral-100 flex items-center justify-center text-neutral-400 mx-auto mb-4 border border-neutral-200">
+              <PackageX className="w-8 h-8 text-neutral-400" />
             </div>
+            <h2 className="text-2xl font-black text-neutral-900 tracking-tight mb-2">
+              Order nahi mila
+            </h2>
+            <p className="text-xs text-neutral-500 leading-relaxed mb-6 font-medium">
+              Humein is session ya ID ka koi confirmed order record nahi mila. Agar aap ne payment ki hai to apna email check karein ya customer concierge se rabta karein.
+            </p>
+            <button
+              onClick={() => (onNavigate ? onNavigate('PRODUCTS') : navigate('/products'))}
+              className="inline-flex items-center gap-2 bg-[#c81d25] hover:bg-[#a8161d] text-white font-black text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-md hover:shadow-lg transition cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Continue Shopping</span>
+            </button>
+          </div>
+        ) : (
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-8 w-full pt-2">
+            {/* Hero Confirmation Card */}
+            <OrderHeroConfirmation
+              orderNumber={activeOrder.orderNumber || 'DEV-VAULT'}
+              customerName={activeOrder.shippingAddress?.firstName || 'Collector'}
+              estDelivery="Oct 28 – Oct 30"
+              trackingNumber={`DEV-EXP-${(activeOrder.orderNumber || 'VAULT').replace(/[^0-9]/g, '')}`}
+              paymentMethod={activeOrder.paymentMethod || 'Stripe Authenticated Checkout'}
+            />
 
-            {/* Right 5 Columns: Summary, Concierge, Suggested Pair */}
-            <div className="lg:col-span-5 space-y-6">
-              <OrderSummarySidebar
-                order={activeOrder}
-                onViewAccount={() => (onNavigate ? onNavigate('ACCOUNT') : navigate('/account'))}
-                onContinueShopping={() => (onNavigate ? onNavigate('PRODUCTS') : navigate('/products'))}
-                onPrintInvoice={() => window.print()}
-                onDownloadPdf={() => showToast('Downloading Official Encrypted Receipt PDF...')}
-              />
+            {/* 2-Column Content Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Left 7 Columns: Tracking, Items, Shipping Destination */}
+              <div className="lg:col-span-7">
+                <OrderFulfillmentTracker
+                  onViewDigitalPass={() => setIsTrackingModalOpen(true)}
+                />
 
-              <OrderHelpConcierge
-                onChatClick={() => showToast('Connecting to 24/7 drop concierge...')}
-                onHotlineClick={() => showToast('Dialing 1-800-DEV-DROP priority line...')}
-                onAddSuggested={() => showToast('Added Eastside Archive Hoodie to your VIP hold list!')}
-              />
+                <OrderPurchasedItems items={activeOrder.items} />
+
+                <OrderShippingDestination
+                  shippingAddress={activeOrder.shippingAddress}
+                  recipientName={
+                    activeOrder.shippingAddress?.fullName ||
+                    (activeOrder.shippingAddress?.firstName
+                      ? `${activeOrder.shippingAddress.firstName} ${activeOrder.shippingAddress.lastName || ''}`.trim()
+                      : null)
+                  }
+                  onAddGateCode={() => showToast('Gate code modal opened. Driver will be notified.')}
+                />
+              </div>
+
+              {/* Right 5 Columns: Summary, Concierge, Suggested Pair */}
+              <div className="lg:col-span-5 space-y-6">
+                <OrderSummarySidebar
+                  order={activeOrder}
+                  onViewAccount={() => (onNavigate ? onNavigate('ACCOUNT') : navigate('/account'))}
+                  onContinueShopping={() => (onNavigate ? onNavigate('PRODUCTS') : navigate('/products'))}
+                  onPrintInvoice={() => window.print()}
+                  onDownloadPdf={() => showToast('Downloading Official Encrypted Receipt PDF...')}
+                />
+
+                <OrderHelpConcierge
+                  onChatClick={() => showToast('Connecting to 24/7 drop concierge...')}
+                  onHotlineClick={() => showToast('Dialing 1-800-DEV-DROP priority line...')}
+                  onAddSuggested={() => showToast('Added Eastside Archive Hoodie to your VIP hold list!')}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
 
       {/* Live Order Tracking Modal */}
-      <OrderTrackingModal
-        order={activeOrder}
-        isOpen={isTrackingModalOpen}
-        onClose={() => setIsTrackingModalOpen(false)}
-      />
+      {activeOrder && (
+        <OrderTrackingModal
+          order={activeOrder}
+          isOpen={isTrackingModalOpen}
+          onClose={() => setIsTrackingModalOpen(false)}
+        />
+      )}
 
       {/* Footer */}
       <Footer onSubscribe={(email) => showToast(`Subscribed ${email} to VIP drop updates!`)} />

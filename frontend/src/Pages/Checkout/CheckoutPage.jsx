@@ -99,6 +99,8 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     }
   }
 
+  const [isProcessing, setIsProcessing] = useState(false)
+
   const handlePlaceOrder = async (paymentDetails = {}) => {
     if (items.length === 0) {
       showToast('Your bag is empty! Add products before placing an order.')
@@ -130,52 +132,63 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
       shippingMethod,
     }
 
-    const isDirectCard = paymentDetails?.paymentType === 'card'
+    const isStripe = paymentDetails?.paymentType === 'stripe' || paymentDetails?.paymentType === 'card'
     const isCod = paymentDetails?.paymentType === 'cod'
 
-    showToast(isDirectCard ? 'Verifying 256-bit card transaction...' : isCod ? 'Authorizing COD drop dispatch...' : 'Processing secure checkout...')
+    setIsProcessing(true)
 
-    let createdOrder = null
-    try {
-      const res = await api.createOrder({
-        ...checkoutPayload,
-        paymentMethod: isCod ? 'cod' : 'credit-card',
-      })
-      if (res && (res.data || res.order)) {
-        createdOrder = res.data || res.order
+    if (isStripe) {
+      showToast('Redirecting to Stripe hosted secure payment...')
+      try {
+        const res = await api.createCheckoutSession(checkoutPayload)
+        if (res && res.url) {
+          // Stripe hosted checkout page handles the card input directly
+          window.location.href = res.url
+          return
+        }
+        throw new Error(res?.message || 'Unable to initialize Stripe checkout session.')
+      } catch (err) {
+        console.error('[Checkout Stripe Error]:', err)
+        showToast(err.message || 'Payment initiation failed. Please check connection and try again.')
+        setIsProcessing(false)
       }
-    } catch (apiErr) {
-      console.warn('[Checkout] Network /orders endpoint unavailable, creating verified vault order locally:', apiErr?.message || apiErr)
+      return
     }
 
-    if (!createdOrder) {
-      createdOrder = {
-        ...checkoutPayload,
-        orderNumber: `DEV-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
-        status: 'Confirmed',
-        totalAmount,
-        createdAt: new Date().toISOString(),
-      }
-    }
-
-    clearCart()
-    showToast('Payment verified! Generating order manifest...')
-    setTimeout(() => {
-      if (onNavigate) {
-        onNavigate('ORDER_CONFIRMATION')
-      } else {
-        navigate('/order-confirmation', {
-          state: {
-            order: {
-              ...createdOrder,
-              cardLast4: paymentDetails?.cardDetails?.cardLast4 || '4242',
-              cardBrand: paymentDetails?.cardDetails?.cardBrand || 'VISA',
-              paymentMethod: isCod ? 'Cash on Delivery' : 'Credit Card (Verified)',
-            },
-          },
+    if (isCod) {
+      showToast('Authorizing COD drop dispatch...')
+      try {
+        const res = await api.createOrder({
+          ...checkoutPayload,
+          paymentMethod: 'cod',
         })
+        const createdOrder = res?.data || res?.order || res
+        if (createdOrder && (createdOrder.orderNumber || createdOrder._id)) {
+          clearCart()
+          showToast('Order confirmed! Generating manifest...')
+          setTimeout(() => {
+            if (onNavigate) {
+              onNavigate('ORDER_CONFIRMATION')
+            } else {
+              navigate('/order-confirmation', {
+                state: {
+                  order: {
+                    ...createdOrder,
+                    paymentMethod: 'Cash on Delivery',
+                  },
+                },
+              })
+            }
+          }, 400)
+          return
+        }
+        throw new Error(res?.message || 'Failed to authorize COD order.')
+      } catch (err) {
+        console.error('[Checkout COD Error]:', err)
+        showToast(err.message || 'Failed to place COD order. Please try again.')
+        setIsProcessing(false)
       }
-    }, 600)
+    }
   }
 
   return (
@@ -326,6 +339,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
               <PaymentMethodCard
                 totalAmount={totalAmount}
                 onPlaceOrder={handlePlaceOrder}
+                isProcessing={isProcessing}
               />
 
               <AntiCounterfeitPolicyCard />
