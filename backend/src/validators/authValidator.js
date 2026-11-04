@@ -39,14 +39,15 @@ export const googleAuthSchema = {
     idToken: Joi.string().trim().optional(),
     token: Joi.string().trim().optional(),
     credential: Joi.string().trim().optional(),
+    accessToken: Joi.string().trim().optional(),
     email: Joi.string().trim().email().optional(),
     name: Joi.string().trim().optional(),
     avatar: Joi.string().trim().allow('').optional(),
     googleId: Joi.string().trim().optional(),
   })
-    .or('idToken', 'token', 'credential', 'email')
+    .or('idToken', 'token', 'credential', 'accessToken')
     .messages({
-      'object.missing': 'Google authentication data (idToken or email) is required',
+      'object.missing': 'Google authentication token (idToken or accessToken) is required',
     }),
 }
 

@@ -76,15 +76,7 @@ export const login = asyncHandler(async (req, res, next) => {
     try {
       const user = await User.findOne({ email: normalizedEmail }).select('+password')
       if (user) {
-        let isMatch = await user.matchPassword(password)
-        if (!isMatch && (user.memberTier === 'GOOGLE AUTH MEMBER' || !user.password)) {
-          // Account was created via Google OAuth with an auto-generated password.
-          // Initialize their chosen password now so they can log in with email/password from now on!
-          user.password = password
-          user.memberTier = 'Core Vault Member'
-          await user.save()
-          isMatch = true
-        }
+        const isMatch = await user.matchPassword(password)
 
         if (!isMatch) {
           return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
@@ -180,28 +172,6 @@ export const register = asyncHandler(async (req, res, next) => {
     try {
       const existing = await User.findOne({ email: normalizedEmail })
       if (existing) {
-        if (existing.memberTier === 'GOOGLE AUTH MEMBER') {
-          existing.password = password
-          if (trimmedName) existing.name = trimmedName
-          existing.memberTier = 'Core Vault Member'
-          await existing.save()
-          const token = generateToken(existing)
-          const safeUser = {
-            id: existing._id.toString(),
-            name: existing.name,
-            email: existing.email,
-            role: existing.role,
-            avatar: existing.avatar,
-            tier: existing.memberTier,
-          }
-          res.cookie('token', token, getCookieOptions(req))
-          return res.status(200).json({
-            success: true,
-            token,
-            user: safeUser,
-            message: 'Password created for your account. Successfully authenticated.',
-          })
-        }
         return next(
           new AppError('An account with this email is already registered. Please sign in instead.', 409)
         )
@@ -288,32 +258,45 @@ export const getMe = asyncHandler(async (req, res) => {
  */
 export const googleAuth = asyncHandler(async (req, res, next) => {
   const rawToken = req.body.idToken || req.body.token || req.body.credential
+  const accessToken = req.body.accessToken
   let googleData = null
 
-  // 1. If an ID token was provided and Google Client is configured, attempt cryptographic verification
-  if (rawToken && (process.env.GOOGLE_CLIENT_ID || (typeof rawToken === 'string' && rawToken.split('.').length === 3))) {
+  // 1. Verify Google ID token if provided
+  if (rawToken) {
     try {
       googleData = await verifyGoogleIdToken(rawToken)
     } catch (err) {
-      if (!req.body.email) {
-        return next(err instanceof AppError ? err : new AppError(`Google verification failed: ${err.message}`, 401))
-      }
+      return next(err instanceof AppError ? err : new AppError(`Google verification failed: ${err.message}`, 401))
     }
-  }
-
-  // 2. Fallback to direct verified profile payload
-  if (!googleData && req.body.email) {
-    const rawEmail = String(req.body.email).trim().toLowerCase()
-    googleData = {
-      email: rawEmail,
-      name: req.body.name ? String(req.body.name).trim() : rawEmail.split('@')[0],
-      avatar: req.body.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-      googleId: req.body.googleId || `g_${Date.now()}`,
+  } else if (accessToken) {
+    // 2. Cryptographically verify Google OAuth access token directly with Google API
+    try {
+      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (!response.ok) {
+        return next(new AppError('Invalid Google access token', 401))
+      }
+      const payload = await response.json()
+      if (!payload.email) {
+        return next(new AppError('Google did not provide a verified email address', 400))
+      }
+      if (payload.email_verified === false) {
+        return next(new AppError('Google email address is not verified by Google', 403))
+      }
+      googleData = {
+        email: payload.email.toLowerCase(),
+        name: payload.name || payload.given_name || 'Google Collector',
+        avatar: payload.picture || '',
+        googleId: payload.sub,
+      }
+    } catch (err) {
+      return next(new AppError(`Google verification failed: ${err.message}`, 401))
     }
   }
 
   if (!googleData || !googleData.email) {
-    return next(new AppError('Google account email or ID token is required for authentication', 400))
+    return next(new AppError('A valid Google ID token or Access token is required for authentication', 400))
   }
 
   const { email, name, avatar } = googleData

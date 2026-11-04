@@ -145,20 +145,8 @@ export default function AuthCard({
         callback: async (tokenResponse) => {
           if (tokenResponse?.access_token) {
             try {
-              const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-              }).then((r) => r.json())
-
-              if (!userInfo.email) {
-                setIsSubmitting(false)
-                setErrorMessage('Google did not provide an email address.')
-                return
-              }
-
               const res = await auth.loginWithGoogle({
-                email: userInfo.email,
-                name: userInfo.name || userInfo.email.split('@')[0],
-                avatar: userInfo.picture || '',
+                accessToken: tokenResponse.access_token,
               })
 
               setIsSubmitting(false)
@@ -174,7 +162,7 @@ export default function AuthCard({
               }
             } catch (err) {
               setIsSubmitting(false)
-              setErrorMessage('Failed to retrieve Google profile: ' + (err.message || 'Error'))
+              setErrorMessage('Google Sign-In failed: ' + (err.message || 'Error'))
             }
           } else {
             setIsSubmitting(false)
