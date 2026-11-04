@@ -1,54 +1,23 @@
-import { getAuthoritativeProduct } from './cartController.js'
+import User from '../models/User.js'
+import Product from '../models/Product.js'
+import { toLightProduct } from '../data/products/index.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 
-// In-memory wishlist store keyed by userId or guestToken/default
-const WISHLIST_STORE = new Map()
-
-// Default guest wishlist key
-const DEFAULT_GUEST_KEY = 'guest_default'
-
-const getSessionKey = (req) => {
-  if (req.user && req.user.id) {
-    return `user_${req.user.id}`
-  }
-  const guestHeader = req.headers['x-guest-id']
-  return guestHeader ? `guest_${guestHeader}` : DEFAULT_GUEST_KEY
-}
-
-const getSetForRequest = (req) => {
-  const key = getSessionKey(req)
-  if (!WISHLIST_STORE.has(key)) {
-    WISHLIST_STORE.set(key, new Set())
-  }
-  return WISHLIST_STORE.get(key)
-}
-
-/**
- * Hydrate a product ID into full display product via MongoDB lookup
- */
-const hydrateProduct = async (productId) => {
-  const serverProd = await getAuthoritativeProduct(productId)
-  if (serverProd) return serverProd
-
-  return {
-    id: productId,
-    title: productId.replace(/-/g, ' ').toUpperCase(),
-    price: 150.0,
-    image: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=600&q=80',
-    stockStatus: 'In Stock',
-    inStock: true,
-  }
-}
-
 /**
  * GET /api/wishlist
- * Returns current wishlisted items and IDs
+ * Returns current user's wishlisted items and IDs from MongoDB
  */
-export const getWishlist = asyncHandler(async (req, res) => {
-  const set = getSetForRequest(req)
-  const ids = Array.from(set)
-  const items = await Promise.all(ids.map(hydrateProduct))
+export const getWishlist = asyncHandler(async (req, res, next) => {
+  const userId = req.user.id || req.user._id
+  const user = await User.findById(userId).lean()
+  if (!user) {
+    return next(new AppError('User not found', 404))
+  }
+
+  const ids = user.wishlist || []
+  const products = ids.length > 0 ? await Product.find({ id: { $in: ids } }).lean() : []
+  const items = products.map(toLightProduct)
 
   res.json({
     success: true,
@@ -60,28 +29,37 @@ export const getWishlist = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/wishlist/toggle
- * Toggles an item in the wishlist
+ * Toggles a product in the user's wishlist in MongoDB
  */
 export const toggleWishlist = asyncHandler(async (req, res, next) => {
   const { productId } = req.body
-
   if (!productId) {
     return next(new AppError('productId is required in request body', 400))
   }
 
-  const set = getSetForRequest(req)
+  const userId = req.user.id || req.user._id
+  const user = await User.findById(userId)
+  if (!user) {
+    return next(new AppError('User not found', 404))
+  }
+
+  const currentList = user.wishlist || []
+  const exists = currentList.includes(productId)
   let inWishlist = false
 
-  if (set.has(productId)) {
-    set.delete(productId)
+  if (exists) {
+    user.wishlist = currentList.filter((id) => id !== productId)
     inWishlist = false
   } else {
-    set.add(productId)
+    user.wishlist = [...currentList, productId]
     inWishlist = true
   }
 
-  const ids = Array.from(set)
-  const items = await Promise.all(ids.map(hydrateProduct))
+  await user.save()
+
+  const ids = user.wishlist
+  const products = ids.length > 0 ? await Product.find({ id: { $in: ids } }).lean() : []
+  const items = products.map(toLightProduct)
 
   res.json({
     success: true,
@@ -95,39 +73,48 @@ export const toggleWishlist = asyncHandler(async (req, res, next) => {
 
 /**
  * DELETE /api/wishlist/:productId
- * Removes a specific item from the wishlist
+ * Removes a specific item from the user's wishlist in MongoDB
  */
 export const removeFromWishlist = asyncHandler(async (req, res, next) => {
   const { productId } = req.params
-  const set = getSetForRequest(req)
+  if (!productId) {
+    return next(new AppError('productId is required', 400))
+  }
 
-  set.delete(productId)
+  const userId = req.user.id || req.user._id
+  const user = await User.findById(userId)
+  if (!user) {
+    return next(new AppError('User not found', 404))
+  }
 
-  const ids = Array.from(set)
-  const items = await Promise.all(ids.map(hydrateProduct))
+  user.wishlist = (user.wishlist || []).filter((id) => id !== productId)
+  await user.save()
 
   res.json({
     success: true,
-    count: items.length,
-    ids,
-    data: items,
-    message: 'Item removed from wishlist',
+    message: 'Removed from wishlist',
+    ids: user.wishlist,
   })
 })
 
 /**
  * DELETE /api/wishlist
- * Clears entire wishlist
+ * Clears the user's entire wishlist in MongoDB
  */
-export const clearWishlist = asyncHandler(async (req, res) => {
-  const set = getSetForRequest(req)
-  set.clear()
+export const clearWishlist = asyncHandler(async (req, res, next) => {
+  const userId = req.user.id || req.user._id
+  const user = await User.findById(userId)
+  if (!user) {
+    return next(new AppError('User not found', 404))
+  }
+
+  user.wishlist = []
+  await user.save()
 
   res.json({
     success: true,
-    count: 0,
+    message: 'Wishlist cleared',
     ids: [],
     data: [],
-    message: 'Wishlist cleared',
   })
 })

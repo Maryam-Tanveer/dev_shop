@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { api } from '../services/api'
+import { useAuth } from './AuthContext'
 
 const WISHLIST_STORAGE_KEY = 'devshop_wishlist_items_v2'
 
 const WishlistContext = createContext(null)
 
 export function WishlistProvider({ children }) {
+  const { isAuthenticated } = useAuth()
+
   const [items, setItems] = useState(() => {
     try {
       const stored = localStorage.getItem(WISHLIST_STORAGE_KEY)
@@ -19,29 +22,31 @@ export function WishlistProvider({ children }) {
     return []
   })
 
-  // Synchronize with backend API on mount
+  // Synchronize with backend API when user is authenticated
   useEffect(() => {
     let isMounted = true
-    api
-      .getWishlist()
-      .then((res) => {
-        if (isMounted && res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-          setItems(res.data)
-          try {
-            localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(res.data))
-          } catch {}
-        }
-      })
-      .catch((err) => {
-        console.warn('[Wishlist API] Background sync notice:', err.message)
-      })
+    if (isAuthenticated) {
+      api
+        .getWishlist()
+        .then((res) => {
+          if (isMounted && res && res.success && Array.isArray(res.data)) {
+            setItems(res.data)
+            try {
+              localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(res.data))
+            } catch {}
+          }
+        })
+        .catch((err) => {
+          console.warn('[Wishlist API] Background sync notice:', err.message)
+        })
+    }
 
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [isAuthenticated])
 
-  // Persist items to localStorage
+  // Persist items to localStorage (guest list stays in localStorage)
   const persistItems = (newItems) => {
     try {
       localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(newItems))
@@ -100,10 +105,12 @@ export function WishlistProvider({ children }) {
     setItems(nextItems)
     persistItems(nextItems)
 
-    // Sync to backend asynchronously
-    api.toggleWishlist(productId).catch((err) => {
-      console.warn('[Wishlist API Sync]:', err.message)
-    })
+    // Sync to backend asynchronously if authenticated
+    if (isAuthenticated) {
+      api.toggleWishlist(productId).catch((err) => {
+        console.warn('[Wishlist API Sync]:', err.message)
+      })
+    }
 
     return inWishlist
   }
@@ -119,7 +126,9 @@ export function WishlistProvider({ children }) {
     setItems(nextItems)
     persistItems(nextItems)
 
-    api.toggleWishlist(product.id).catch(() => {})
+    if (isAuthenticated) {
+      api.toggleWishlist(product.id).catch(() => {})
+    }
     return true
   }
 
@@ -132,7 +141,9 @@ export function WishlistProvider({ children }) {
     setItems(nextItems)
     persistItems(nextItems)
 
-    api.removeFromWishlist(productId).catch(() => {})
+    if (isAuthenticated) {
+      api.removeFromWishlist(productId).catch(() => {})
+    }
   }
 
   /**
@@ -141,7 +152,10 @@ export function WishlistProvider({ children }) {
   const clearWishlist = async () => {
     setItems([])
     persistItems([])
-    api.clearWishlist().catch(() => {})
+
+    if (isAuthenticated) {
+      api.clearWishlist().catch(() => {})
+    }
   }
 
   return (

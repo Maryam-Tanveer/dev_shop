@@ -115,6 +115,10 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
     addresses: [addressSchema],
+    wishlist: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,
