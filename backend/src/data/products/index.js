@@ -12,10 +12,74 @@ export const RAW_DATABASE = {
 }
 
 /**
+ * Normalizes a product from either MongoDB document format or in-memory format
+ * Maps DB fields (colors, images, stockCount, inStock, reviewsCount) to API fields (colorways, thumbnails, stock, stockStatus, reviews)
+ */
+export const normalizeProduct = (raw) => {
+  if (!raw) return null
+  const p = raw.toObject ? raw.toObject() : { ...raw }
+
+  // 1. Stock and StockStatus (Sold Out support)
+  const stock = p.stock !== undefined ? p.stock : (p.stockCount !== undefined ? p.stockCount : 15)
+  const isSoldOut = p.inStock === false || stock === 0
+  const stockStatus = p.stockStatus || (isSoldOut ? 'Sold Out' : (p.isUnavailable ? 'TBA' : (stock <= 3 ? `${stock} Left` : 'In Stock')))
+
+  // 2. Reviews
+  const reviews = p.reviews !== undefined ? p.reviews : (p.reviewsCount !== undefined ? p.reviewsCount : 42)
+
+  // 3. Thumbnails from DB 'images' array
+  let thumbnails = p.thumbnails
+  if (!thumbnails || thumbnails.length === 0) {
+    if (p.images && p.images.length > 0) {
+      thumbnails = p.images.map((img, idx) => ({
+        id: `thumb-${idx}`,
+        label: idx === 0 ? 'FRONT' : idx === 1 ? 'PROFILE' : idx === 2 ? 'SOLE GRIP' : 'UNBOX',
+        image: img,
+      }))
+    }
+  }
+
+  // 4. Colorways from DB 'colors' array
+  let colorways = p.colorways
+  if (!colorways || colorways.length === 0) {
+    if (p.colors && p.colors.length > 0) {
+      colorways = p.colors.map((c, idx) => ({
+        id: c.name || `col-${idx}`,
+        name: c.name || 'Colorway',
+        color: c.hex || c.color || '#171717',
+        image: c.image || p.image,
+      }))
+    }
+  }
+
+  // 5. Sizes: normalize to object array with .size property
+  let sizes = p.sizes || []
+  if (sizes.length > 0) {
+    sizes = sizes.map((s) => {
+      if (typeof s === 'string') {
+        return { size: s, status: isSoldOut ? 'Sold Out' : 'In Stock', badgeColor: 'text-neutral-400' }
+      }
+      return s
+    })
+  }
+
+  return {
+    ...p,
+    stock,
+    stockStatus,
+    reviews,
+    thumbnails,
+    colorways,
+    sizes,
+  }
+}
+
+/**
  * Standard Lightweight Product Shape (for lists, grids, carousels, searches)
  */
 export const toLightProduct = (p) => {
   if (!p) return null
+  p = normalizeProduct(p)
 
   const mainImg = p.image || p.thumbnails?.[0]?.image || ''
   const origPrice = p.originalPrice || (p.price && p.saveAmount ? Number(p.price) + 40 : null)
@@ -64,6 +128,7 @@ export const toLightProduct = (p) => {
     rating: p.rating || 5.0,
     reviews: p.reviews || 48,
     image: mainImg,
+    sizes: (p.sizes || []).map((s) => s.size),
     isNew: Boolean(p.isNew),
     isDeal: Boolean(p.isDeal || p.originalPrice || p.badgeType === 'discount' || (typeof p.id === 'string' && p.id.startsWith('deal-'))),
     isUnavailable: Boolean(p.isUnavailable)
@@ -76,6 +141,7 @@ export const toLightProduct = (p) => {
  */
 export const toDetailProduct = (p) => {
   if (!p) return null
+  p = normalizeProduct(p)
   const light = toLightProduct(p)
 
   const normalizedThumbnails = p.thumbnails && p.thumbnails.length > 0

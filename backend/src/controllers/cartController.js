@@ -38,35 +38,6 @@ export const getAuthoritativeProduct = async (id) => {
     console.warn('[DB Product Lookup]:', err.message)
   }
 
-  // Fallback to master in-memory product database (handles all catalog and drop items)
-  const fallback =
-    PRODUCTS_DATABASE[cleanId] ||
-    RAW_DATABASE[cleanId] ||
-    Object.values(RAW_DATABASE).find((p) => p.id === cleanId)
-
-  if (fallback) {
-    const detailed = toDetailProduct(fallback)
-    return {
-      id: detailed.id,
-      title: detailed.title,
-      fullTitle: detailed.fullTitle || detailed.title,
-      price: Number(detailed.price) || 0,
-      originalPrice: detailed.originalPrice ? Number(detailed.originalPrice) : null,
-      image: detailed.image,
-      brand: detailed.brand || 'Dev Shop',
-      category: detailed.category || 'Sneakers',
-      colorways: (detailed.colorways || []).map((c) => ({
-        name: c.name,
-        color: c.color,
-        image: detailed.image,
-      })),
-      badge: detailed.badge || 'CERTIFIED',
-      badgeColor: detailed.badgeColor || 'bg-neutral-900 text-white',
-      condition: 'Deadstock Authentic',
-      tag: detailed.tag || 'Vault Certified',
-    }
-  }
-
   return null
 }
 

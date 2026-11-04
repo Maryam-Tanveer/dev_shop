@@ -10,6 +10,11 @@ import { USERS } from '../data/users.js'
 dotenv.config()
 
 const seedDatabase = async () => {
+  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_PROD_SEED) {
+    console.error('[SEED BLOCKED] Production database cannot be wiped without explicit ALLOW_PROD_SEED=true in environment.')
+    process.exit(1)
+  }
+
   const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/devshop'
 
   console.log(`[SEED] Connecting to MongoDB: ${mongoUri}`)

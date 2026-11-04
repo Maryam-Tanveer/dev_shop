@@ -8,6 +8,8 @@ import AppError from '../utils/AppError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import Product from '../models/Product.js'
 
+const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 /**
  * Get all products (Lightweight shape) with optional filtering by category, brand, or search query.
  * MongoDB with seamless master database fallback.
@@ -37,12 +39,12 @@ export const getProducts = asyncHandler(async (req, res) => {
         { brand: /ASICS|SPECIAL EDITION/i },
       ]
     } else {
-      filter.category = new RegExp(category, 'i')
+      filter.category = new RegExp(escapeRegex(category), 'i')
     }
   }
 
   if (brand && brand !== 'All') {
-    filter.brand = new RegExp(brand, 'i')
+    filter.brand = new RegExp(escapeRegex(brand), 'i')
   }
 
   if (q && q.trim()) {
@@ -73,46 +75,6 @@ export const getProducts = asyncHandler(async (req, res) => {
     console.warn(`[getProducts] DB find failed: ${err.message}`)
   }
 
-  // Fallback if DB returns empty or connection unavailable
-  if (!dbProducts || dbProducts.length === 0) {
-    let fallbackList = Object.values(RAW_DATABASE)
-    if (category && category !== 'All') {
-      if (/top\s*best\s*deals/i.test(category)) {
-        fallbackList = fallbackList.filter(
-          (p) => p.originalPrice || (p.badge && /OFF|SALE|DEAL/i.test(p.badge)) || (p.id && p.id.startsWith('deal-'))
-        )
-      } else if (/automated\s*collection/i.test(category)) {
-        fallbackList = fallbackList.filter(
-          (p) => /Automated Collection/i.test(p.category) || /snowboard/i.test(p.id) || /EXCLUSIVE WINTER/i.test(p.brand)
-        )
-      } else if (/hydrogen/i.test(category)) {
-        fallbackList = fallbackList.filter(
-          (p) => /Hydrogen/i.test(p.category) || /ASICS|SPECIAL/i.test(p.brand)
-        )
-      } else if (!/home\s*page/i.test(category)) {
-        const catRegex = new RegExp(category, 'i')
-        const matched = fallbackList.filter((p) => catRegex.test(p.category))
-        if (matched.length > 0) fallbackList = matched
-      }
-    }
-    if (brand && brand !== 'All') {
-      const brandRegex = new RegExp(brand, 'i')
-      const matched = fallbackList.filter((p) => brandRegex.test(p.brand))
-      if (matched.length > 0) fallbackList = matched
-    }
-    if (q && q.trim()) {
-      const qLower = q.toLowerCase()
-      fallbackList = fallbackList.filter(
-        (p) =>
-          p.title?.toLowerCase().includes(qLower) ||
-          p.fullTitle?.toLowerCase().includes(qLower) ||
-          p.brand?.toLowerCase().includes(qLower) ||
-          p.id?.toLowerCase().includes(qLower)
-      )
-    }
-    dbProducts = fallbackList
-  }
-
   res.json({
     success: true,
     count: dbProducts.length,
@@ -137,19 +99,6 @@ export const getProductById = asyncHandler(async (req, res, next) => {
   }
 
   if (!dbProduct) {
-    // Check in-memory master database (handles deal-1, deal-2, etc.)
-    const fallback =
-      PRODUCTS_DATABASE[id] ||
-      RAW_DATABASE[id] ||
-      Object.values(RAW_DATABASE).find((p) => p.id === id)
-
-    if (fallback) {
-      return res.json({
-        success: true,
-        data: toDetailProduct(fallback),
-      })
-    }
-
     return next(new AppError(`Product with id '${id}' not found`, 404))
   }
 
@@ -190,7 +139,7 @@ export const getRelatedProducts = asyncHandler(async (req, res) => {
   const filter = {}
 
   if (category && category !== 'All') {
-    filter.category = new RegExp(category, 'i')
+    filter.category = new RegExp(escapeRegex(category), 'i')
   }
   if (currentId) {
     filter.id = { $ne: currentId }
