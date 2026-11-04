@@ -28,6 +28,7 @@ if (!process.env.JWT_SECRET || !process.env.JWT_SECRET.trim()) {
 }
 
 const app = express()
+app.set('trust proxy', 1)
 const PORT = process.env.PORT || 5000
 const NODE_ENV = process.env.NODE_ENV || 'production'
 

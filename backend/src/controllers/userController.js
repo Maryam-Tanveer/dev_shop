@@ -123,8 +123,8 @@ export const changePassword = asyncHandler(async (req, res, next) => {
     return next(new AppError('Current password and new password are required', 400))
   }
 
-  if (newPassword.length < 6) {
-    return next(new AppError('New password must be at least 6 characters long', 400))
+  if (newPassword.length < 8) {
+    return next(new AppError('New password must be at least 8 characters long', 400))
   }
 
   if (dbStatus.connected) {

@@ -11,13 +11,11 @@ import {
 
 const router = express.Router()
 
-// Apply strict rate limiting to all auth endpoints
-router.use(authLimiter)
-
-router.post('/login', validate(loginSchema), login)
-router.post('/register', validate(registerSchema), register)
-router.post('/signup', validate(registerSchema), register)
-router.post('/google', validate(googleAuthSchema), googleAuth)
+// Apply rate limiting specifically to credential and token submission endpoints
+router.post('/login', authLimiter, validate(loginSchema), login)
+router.post('/register', authLimiter, validate(registerSchema), register)
+router.post('/signup', authLimiter, validate(registerSchema), register)
+router.post('/google', authLimiter, validate(googleAuthSchema), googleAuth)
 router.post('/logout', logout)
 router.get('/me', requireAuth, getMe)
 

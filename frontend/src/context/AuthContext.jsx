@@ -192,7 +192,7 @@ export function AuthProvider({ children }) {
       value={{
         token,
         currentUser,
-        isAuthenticated: !!currentUser && !!token,
+        isAuthenticated: !!currentUser,
         loading,
         login,
         signup,
