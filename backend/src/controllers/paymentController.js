@@ -134,7 +134,7 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
   })
 
   // Save stripeSessionId to order
-  if (dbStatus.connected && savedOrder._id) {
+  if (savedOrder._id) {
     await Order.findByIdAndUpdate(savedOrder._id, { stripeSessionId: session.id }).catch(() => {})
   }
   savedOrder.stripeSessionId = session.id
@@ -227,7 +227,7 @@ export const stripeWebhook = async (req, res) => {
     order.status = 'Confirmed'
     order.paymentStatus = 'paid'
     order.stripePaymentIntentId = paymentIntentId
-    if (dbStatus.connected && order.save) {
+    if (order.save) {
       await order.save()
     }
 
@@ -298,7 +298,7 @@ export const verifySession = asyncHandler(async (req, res, next) => {
   order.status = 'Confirmed'
   order.paymentStatus = 'paid'
   order.stripePaymentIntentId = session.payment_intent
-  if (dbStatus.connected && order.save) {
+  if (order.save) {
     await order.save()
   }
 
