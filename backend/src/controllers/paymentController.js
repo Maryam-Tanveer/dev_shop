@@ -187,56 +187,66 @@ export const stripeWebhook = async (req, res) => {
 
   // 3. Process Verified Events
   if (event.type === 'checkout.session.completed') {
-    const session = event.data?.object || {}
-    const orderNumber = session.metadata?.orderNumber
-    const sessionId = session.id
-    const paymentIntentId = session.payment_intent || session.id
+    try {
+      const session = event.data?.object || {}
+      const orderNumber = session.metadata?.orderNumber
+      const sessionId = session.id
+      const paymentIntentId = session.payment_intent || session.id
 
-    // Confirm that payment status is actually paid
-    if (session.payment_status !== 'paid') {
-      console.warn(`[STRIPE WEBHOOK] Session ${sessionId} status is not paid (${session.payment_status}). Skipping.`)
-      return res.status(200).json({ received: true, message: 'Session payment status not paid' })
-    }
+      // Confirm that payment status is actually paid
+      if (session.payment_status !== 'paid') {
+        console.warn(`[STRIPE WEBHOOK] Session ${sessionId} status is not paid (${session.payment_status}). Skipping.`)
+        return res.status(200).json({ received: true, message: 'Session payment status not paid' })
+      }
 
-    const order = await Order.findOne({
-      $or: [
-        ...(orderNumber ? [{ orderNumber }] : []),
-        ...(sessionId ? [{ stripeSessionId: sessionId }] : []),
-      ],
-    })
-
-    if (!order) {
-      console.warn(`[STRIPE WEBHOOK] Order not found for orderNumber: ${orderNumber}, sessionId: ${sessionId}`)
-      return res.status(404).json({ error: 'Order not found for verified checkout session.' })
-    }
-
-    // 4. Validate Amount: session.amount_total (cents) must match order.totalAmount (dollars)
-    const paidAmount = Number((session.amount_total / 100).toFixed(2))
-    const expectedAmount = Number(Number(order.totalAmount).toFixed(2))
-
-    if (Math.abs(paidAmount - expectedAmount) > 0.05) {
-      console.error(
-        `[STRIPE WEBHOOK FRAUD DETECTED] Amount mismatch for order ${order.orderNumber}! Expected: $${expectedAmount}, Received: $${paidAmount}`
-      )
-      return res.status(400).json({
-        error: `Payment amount mismatch: Expected $${expectedAmount}, received $${paidAmount}. Order confirmation aborted.`,
+      const order = await Order.findOne({
+        $or: [
+          ...(orderNumber ? [{ orderNumber }] : []),
+          ...(sessionId ? [{ stripeSessionId: sessionId }] : []),
+        ],
       })
+
+      if (!order) {
+        console.warn(`[STRIPE WEBHOOK] Order not found for orderNumber: ${orderNumber}, sessionId: ${sessionId}`)
+        return res.status(404).json({ error: 'Order not found for verified checkout session.' })
+      }
+
+      // 4. Validate Amount: session.amount_total (cents) must match order.totalAmount (dollars)
+      const paidAmount = Number((session.amount_total / 100).toFixed(2))
+      const expectedAmount = Number(Number(order.totalAmount).toFixed(2))
+
+      if (Math.abs(paidAmount - expectedAmount) > 0.05) {
+        console.error(
+          `[STRIPE WEBHOOK FRAUD DETECTED] Amount mismatch for order ${order.orderNumber}! Expected: $${expectedAmount}, Received: $${paidAmount}`
+        )
+        return res.status(400).json({
+          error: `Payment amount mismatch: Expected $${expectedAmount}, received $${paidAmount}. Order confirmation aborted.`,
+        })
+      }
+
+      // Duplicate email & processing prevention: If order already marked as paid, return early
+      if (order.paymentStatus === 'paid') {
+        return res.json({ received: true })
+      }
+
+      // 5. Update Order to Confirmed and Paid
+      order.status = 'Confirmed'
+      order.paymentStatus = 'paid'
+      order.stripePaymentIntentId = paymentIntentId
+      if (order.save) {
+        await order.save()
+      }
+
+      console.log(`[STRIPE WEBHOOK] Verified signature & confirmed order ${order.orderNumber} for $${paidAmount}`)
+
+      // Dispatch receipt email
+      sendOrderReceiptEmail(order).catch((err) =>
+        console.warn('[RECEIPT EMAIL NOTICE]:', err.message)
+      )
+    } catch (err) {
+      console.error(err)
+      return res.status(500).json({ error: 'webhook failed' })
     }
-
-    // 5. Update Order to Confirmed and Paid
-    order.status = 'Confirmed'
-    order.paymentStatus = 'paid'
-    order.stripePaymentIntentId = paymentIntentId
-    if (order.save) {
-      await order.save()
-    }
-
-    console.log(`[STRIPE WEBHOOK] Verified signature & confirmed order ${order.orderNumber} for $${paidAmount}`)
-
-    // Dispatch receipt email
-    sendOrderReceiptEmail(order).catch((err) =>
-      console.warn('[RECEIPT EMAIL NOTICE]:', err.message)
-    )
   }
 
   return res.json({ received: true })
@@ -293,6 +303,16 @@ export const verifySession = asyncHandler(async (req, res, next) => {
         400
       )
     )
+  }
+
+  // Duplicate email & processing prevention: If order already marked as paid, return early
+  if (order.paymentStatus === 'paid') {
+    return res.json({
+      success: true,
+      paid: true,
+      orderNumber: order.orderNumber || orderNumber,
+      order,
+    })
   }
 
   order.status = 'Confirmed'
