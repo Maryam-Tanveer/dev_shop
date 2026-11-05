@@ -14,7 +14,8 @@ import { getDBStatus, connectDB } from '../config/db.js'
 import { OAuth2Client } from 'google-auth-library'
 import { revokeToken, isTokenRevoked } from '../services/tokenBlacklist.js'
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || undefined)
+const GOOGLE_CLIENT_ID_FALLBACK = '621169625180-dopipkp0jaht2cihfuq03bguq8tehjn8.apps.googleusercontent.com'
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK)
 
 export const getCookieOptions = (req) => {
   const isHttps = req ? Boolean(req.secure || req.headers['x-forwarded-proto'] === 'https') : false
@@ -37,10 +38,10 @@ export async function verifyGoogleIdToken(token) {
     throw new AppError('Google ID token is required', 400)
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientId = process.env.GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK
   const ticket = await googleClient.verifyIdToken({
     idToken: token,
-    audience: clientId || undefined,
+    audience: clientId,
   })
 
   const payload = ticket.getPayload()
@@ -387,10 +388,8 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
         user: safeUser,
       })
     } catch (err) {
-      console.warn('[GOOGLE AUTH DB NOTICE]:', err.message)
-      if (process.env.NODE_ENV === 'production') {
-        return next(new AppError('Database error during Google authentication.', 500))
-      }
+      console.error('[GOOGLE AUTH DB ERROR]:', err)
+      return next(new AppError(`Google authentication failed: ${err.message}`, 500))
     }
 
   // Refuse in-memory fallback in production

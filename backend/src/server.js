@@ -47,7 +47,7 @@ app.use(async (req, res, next) => {
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    crossOriginOpenerPolicy: false,
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   })
 )
 
