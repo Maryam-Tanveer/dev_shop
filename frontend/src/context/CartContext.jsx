@@ -62,11 +62,15 @@ export function CartProvider({ children }) {
 
   // Hydrated items with authoritative prices fetched from server
   const [hydratedItems, setHydratedItems] = useState([])
+  const [pricingError, setPricingError] = useState(null)
   const [serverTotals, setServerTotals] = useState({
     subtotal: 0,
     tax: 0,
     shipping: 0,
+    shippingCost: 0,
+    shippingMethod: 'standard',
     total: 0,
+    freeShippingThreshold: 150,
   })
   const [isLoadingPrices, setIsLoadingPrices] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -87,15 +91,24 @@ export function CartProvider({ children }) {
   }, [rawItems])
 
   // Sync with backend API to fetch authoritative server prices & metadata
-  // Sync with backend API to fetch authoritative server prices & metadata
   const syncWithServer = useCallback(async (itemsToPrice) => {
     if (!itemsToPrice || itemsToPrice.length === 0) {
       setHydratedItems([])
-      setServerTotals({ subtotal: 0, tax: 0, shipping: 0, total: 0 })
+      setServerTotals({
+        subtotal: 0,
+        tax: 0,
+        shipping: 0,
+        shippingCost: 0,
+        shippingMethod: 'standard',
+        total: 0,
+        freeShippingThreshold: 150,
+      })
+      setPricingError(null)
       return
     }
 
     setIsLoadingPrices(true)
+    setPricingError(null)
     try {
       const result = await api.priceCart(itemsToPrice)
       if (result && Array.isArray(result.items) && result.items.length > 0) {
@@ -103,52 +116,39 @@ export function CartProvider({ children }) {
         setServerTotals({
           subtotal: result.subtotal || 0,
           tax: result.tax || 0,
-          shipping: result.shipping || 0,
-          total: result.total || 0,
+          shipping: result.shipping ?? result.shippingCost ?? 0,
+          shippingCost: result.shippingCost ?? result.shipping ?? 0,
+          shippingMethod: result.shippingMethod || 'standard',
+          total: result.total || result.totalAmount || 0,
+          freeShippingThreshold: result.freeShippingThreshold ?? 150,
         })
+        setPricingError(null)
       } else {
-        // Fallback hydration directly from item descriptors
-        const fallback = itemsToPrice.map((it) => {
-          const variantKey = `${it.productId}::${it.size}::${it.colorway}`
-          return {
-            cartItemId: variantKey,
-            id: variantKey,
-            productId: it.productId,
-            title: it.title || 'Vault Drop Item',
-            fullTitle: it.fullTitle || it.title || 'Vault Drop Item',
-            size: it.size || 'US 9.5',
-            colorway: it.colorway || 'Standard',
-            quantity: it.qty || 1,
-            price: Number(it.price) || 180,
-            image: it.image || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=400&q=80',
-            badge: 'CERTIFIED',
-          }
+        setHydratedItems([])
+        setServerTotals({
+          subtotal: 0,
+          tax: 0,
+          shipping: 0,
+          shippingCost: 0,
+          shippingMethod: 'standard',
+          total: 0,
+          freeShippingThreshold: 150,
         })
-        setHydratedItems(fallback)
-        const sub = fallback.reduce((sum, f) => sum + f.price * f.quantity, 0)
-        setServerTotals({ subtotal: sub, tax: Math.round(sub * 0.08), shipping: 15, total: sub + Math.round(sub * 0.08) + 15 })
+        setPricingError('Prices load nahi huin')
       }
     } catch (err) {
-      console.warn('Server cart pricing unavailable, using local descriptor hydration:', err.message)
-      const fallback = itemsToPrice.map((it) => {
-        const variantKey = `${it.productId}::${it.size}::${it.colorway}`
-        return {
-          cartItemId: variantKey,
-          id: variantKey,
-          productId: it.productId,
-          title: it.title || 'Vault Drop Item',
-          fullTitle: it.fullTitle || it.title || 'Vault Drop Item',
-          size: it.size || 'US 9.5',
-          colorway: it.colorway || 'Standard',
-          quantity: it.qty || 1,
-          price: Number(it.price) || 180,
-          image: it.image || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=400&q=80',
-          badge: 'CERTIFIED',
-        }
+      console.warn('Server cart pricing unavailable:', err.message)
+      setHydratedItems([])
+      setServerTotals({
+        subtotal: 0,
+        tax: 0,
+        shipping: 0,
+        shippingCost: 0,
+        shippingMethod: 'standard',
+        total: 0,
+        freeShippingThreshold: 150,
       })
-      setHydratedItems(fallback)
-      const sub = fallback.reduce((sum, f) => sum + f.price * f.quantity, 0)
-      setServerTotals({ subtotal: sub, tax: Math.round(sub * 0.08), shipping: 15, total: sub + Math.round(sub * 0.08) + 15 })
+      setPricingError('Prices load nahi huin')
     } finally {
       setIsLoadingPrices(false)
     }
@@ -162,9 +162,7 @@ export function CartProvider({ children }) {
   const totalItemCount = rawItems.reduce((sum, it) => sum + (it.qty || 1), 0)
 
   // Subtotal is dynamically derived from authoritative server pricing
-  const subtotal = serverTotals.subtotal > 0
-    ? serverTotals.subtotal
-    : Number(hydratedItems.reduce((acc, it) => acc + (it.price || 0) * (it.quantity || 1), 0).toFixed(2))
+  const subtotal = serverTotals.subtotal || 0
 
   /**
    * addToCart:
@@ -179,7 +177,7 @@ export function CartProvider({ children }) {
     const targetColor = String(options.colorway || product.colorway || 'Standard').trim()
     const quantityToAdd = Math.max(1, parseInt(options.quantity || options.qty || 1, 10))
     const itemTitle = product.title || product.fullTitle || 'Vault Drop Item'
-    const itemPrice = Number(product.price) || 180
+    const itemPrice = Number(product.price) || 0
     const itemImage = product.image || product.thumbnails?.[0]?.image || ''
 
     setRawItems((prev) => {
@@ -299,10 +297,16 @@ export function CartProvider({ children }) {
         rawItems,
         cartCount: totalItemCount,
         totalItemCount,
-        subtotal,
+        serverTotals,
+        subtotal: serverTotals.subtotal,
         tax: serverTotals.tax,
-        shippingCost: serverTotals.shipping,
+        shippingCost: serverTotals.shippingCost,
+        shipping: serverTotals.shippingCost,
         total: serverTotals.total,
+        totalAmount: serverTotals.total,
+        freeShippingThreshold: serverTotals.freeShippingThreshold || 150,
+        pricingError,
+        retryPricing: () => syncWithServer(rawItems),
         isLoadingPrices,
         addToCart,
         removeFromCart,

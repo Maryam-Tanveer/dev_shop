@@ -111,18 +111,6 @@ export const api = {
     return res.data || res || []
   },
 
-  /**
-   * Fetch curated collections matching category tabs
-   */
-  async getCollections(params = {}) {
-    const queryParams = new URLSearchParams()
-    if (params.category && params.category !== 'all') {
-      queryParams.append('category', params.category)
-    }
-    const qs = queryParams.toString() ? `?${queryParams.toString()}` : ''
-    const res = await request(`/collections${qs}`).catch(() => null)
-    return res?.data || []
-  },
 
   /**
    * Fetch single product by ID directly from API
@@ -170,10 +158,10 @@ export const api = {
    * Sends minimal variant descriptors: [{ productId, size, colorway, qty }]
    * Returns authoritative server-calculated prices, totals and item metadata
    */
-  async priceCart(items = []) {
+  async priceCart(items = [], shippingMethod = 'standard') {
     const res = await request('/cart/price', {
       method: 'POST',
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({ items, shippingMethod }),
     })
     return res.data || res
   },

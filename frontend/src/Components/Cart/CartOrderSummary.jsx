@@ -1,36 +1,16 @@
-import { useState } from 'react'
 import { ArrowRight, ShieldCheck, RotateCcw, Lock, Info, MessageSquare } from 'lucide-react'
 
 export default function CartOrderSummary({
-  subtotal = 0,
+  subtotal: propSubtotal = 0,
+  serverTotals,
   itemCount = 0,
   onProceedCheckout,
   onOpenChat,
-  onApplyPromo
 }) {
-  const [promoCode, setPromoCode] = useState('')
-  const [discount, setDiscount] = useState(0)
-  const [appliedPromo, setAppliedPromo] = useState(null)
-
-  const tax = Number((subtotal * 0.08).toFixed(2))
-  const total = Number((subtotal + tax - discount).toFixed(2))
-
-  const handleApply = (e) => {
-    e.preventDefault()
-    if (!promoCode.trim()) return
-
-    if (promoCode.trim().toUpperCase() === 'DEV10' || promoCode.trim().toUpperCase() === 'VAULT') {
-      const discAmount = Number((subtotal * 0.1).toFixed(2))
-      setDiscount(discAmount)
-      setAppliedPromo(promoCode.trim().toUpperCase())
-      if (onApplyPromo) onApplyPromo(discAmount, promoCode.trim().toUpperCase())
-    } else {
-      const discAmount = 15.00
-      setDiscount(discAmount)
-      setAppliedPromo(promoCode.trim().toUpperCase())
-      if (onApplyPromo) onApplyPromo(discAmount, promoCode.trim().toUpperCase())
-    }
-  }
+  const subtotal = serverTotals?.subtotal ?? propSubtotal ?? 0
+  const tax = serverTotals?.tax ?? Number((subtotal * 0.08).toFixed(2))
+  const shippingCost = serverTotals?.shippingCost ?? serverTotals?.shipping ?? 0
+  const total = serverTotals?.total ?? Number((subtotal + tax + shippingCost).toFixed(2))
 
   return (
     <div className="space-y-4">
@@ -55,10 +35,12 @@ export default function CartOrderSummary({
 
           <div className="flex justify-between items-center text-neutral-600">
             <span className="flex items-center gap-1">
-              <span>Estimated Express Shipping</span>
+              <span>Estimated Shipping</span>
               <Info className="w-3 h-3 text-neutral-400" />
             </span>
-            <span className="font-extrabold text-[#c81d25]">FREE</span>
+            <span className="font-extrabold text-[#c81d25]">
+              {shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}
+            </span>
           </div>
 
           <div className="flex justify-between items-center text-neutral-600">
@@ -73,35 +55,6 @@ export default function CartOrderSummary({
             <span>Estimated Sales Tax</span>
             <span className="font-bold text-neutral-900">${tax.toFixed(2)}</span>
           </div>
-
-          {discount > 0 && (
-            <div className="flex justify-between text-[#c81d25] font-bold">
-              <span>Promo ({appliedPromo})</span>
-              <span>-${discount.toFixed(2)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Discount Code Section */}
-        <div className="py-4 border-b border-neutral-100">
-          <label className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block mb-2">
-            DISCOUNT CODE OR VOUCHER
-          </label>
-          <form onSubmit={handleApply} className="flex gap-2">
-            <input
-              type="text"
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value)}
-              placeholder="Enter promo code"
-              className="flex-1 bg-[#f7f6f4] focus:bg-white text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#c81d25] transition"
-            />
-            <button
-              type="submit"
-              className="bg-[#1a1a1a] hover:bg-neutral-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shadow-xs active:scale-95"
-            >
-              Apply
-            </button>
-          </form>
         </div>
 
         {/* Total Line */}

@@ -18,6 +18,10 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
     items,
     totalItemCount,
     subtotal,
+    serverTotals,
+    freeShippingThreshold,
+    pricingError,
+    retryPricing,
     addToCart,
     removeFromCart,
     updateQuantity,
@@ -80,6 +84,12 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
     }
   }
 
+  const threshold = serverTotals?.freeShippingThreshold || freeShippingThreshold || 150
+  const currentSubtotal = serverTotals?.subtotal ?? subtotal ?? 0
+  const progress = threshold > 0 ? Math.min(100, Math.round((currentSubtotal / threshold) * 100)) : 100
+  const isUnlocked = currentSubtotal >= threshold
+  const remaining = Math.max(0, threshold - currentSubtotal)
+
   return (
     <div className="min-h-screen bg-[#fcfbfa] text-[#1a1a1a] flex flex-col font-sans relative selection:bg-[#c81d25] selection:text-white">
       {/* Toast Notification */}
@@ -130,6 +140,26 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
           </button>
         </div>
 
+        {/* Pricing Error Alert */}
+        {pricingError && (
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-8 pt-2 w-full">
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+              <span className="text-xs sm:text-sm font-bold flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{pricingError}</span>
+              </span>
+              {retryPricing && (
+                <button
+                  onClick={retryPricing}
+                  className="text-xs font-bold bg-[#c81d25] text-white px-4 py-1.5 rounded-xl hover:bg-rose-700 transition active:scale-95"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {items.length === 0 ? (
           /* EMPTY CART PAGE EXPERIENCE (As shown in user screenshot) */
           <>
@@ -176,7 +206,12 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Left 8 Cols: Delivery progress bar & cart items */}
                 <div className="lg:col-span-8">
-                  <CartDeliveryProgress progress={100} isUnlocked={true} />
+                  <CartDeliveryProgress
+                    progress={progress}
+                    isUnlocked={isUnlocked}
+                    remaining={remaining}
+                    threshold={threshold}
+                  />
 
                   <CartItemList
                     items={items}
@@ -191,7 +226,8 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
                 {/* Right 4 Cols: Order Summary, promo, checkout, and sizing chat */}
                 <div className="lg:col-span-4">
                   <CartOrderSummary
-                    subtotal={subtotal}
+                    serverTotals={serverTotals}
+                    subtotal={currentSubtotal}
                     itemCount={totalItemCount}
                     onProceedCheckout={() => {
                       showToast('Redirecting to SSL encrypted checkout...')
@@ -202,7 +238,6 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
                       }
                     }}
                     onOpenChat={() => showToast('Connecting to 24/7 streetwear advisor...')}
-                    onApplyPromo={(amount, code) => showToast(`Promo code ${code} applied (-$${amount})!`)}
                   />
                 </div>
               </div>

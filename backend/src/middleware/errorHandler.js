@@ -54,11 +54,11 @@ const sendErrorDev = (err, req, res) => {
  * Send error response in production environment
  */
 const sendErrorProd = (err, req, res) => {
-  // Operational, trusted error: send message to client
-  if (err.isOperational) {
+  // Operational, trusted error or client-side HTTP 4xx error: send message to client
+  if (err.isOperational || (err.statusCode && err.statusCode < 500)) {
     return res.status(err.statusCode).json({
       success: false,
-      status: err.status,
+      status: err.status || 'fail',
       error: err.message,
       details: err.details || null,
     })

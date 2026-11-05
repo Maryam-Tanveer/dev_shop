@@ -5,6 +5,7 @@ import { getAuthoritativeProduct } from './cartController.js'
 import { sendOrderReceiptEmail } from '../services/emailService.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
+import { calcTotals } from '../utils/pricing.js'
 
 const getStripe = () => {
   const secret = process.env.STRIPE_SECRET_KEY
@@ -56,9 +57,7 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
   const subtotal = Number(
     sanitizedItems.reduce((acc, it) => acc + it.price * it.quantity, 0).toFixed(2)
   )
-  const shippingCost = shippingMethod === 'priority' ? 25.0 : 0.0
-  const tax = Number((subtotal * 0.08).toFixed(2))
-  const totalAmount = Number((subtotal + shippingCost + tax).toFixed(2))
+  const { shippingCost, tax, totalAmount } = calcTotals(subtotal, shippingMethod)
   const orderNumber = `DEV-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 
   // 2. Create Order with PENDING status (Order is NOT confirmed until payment succeeds)

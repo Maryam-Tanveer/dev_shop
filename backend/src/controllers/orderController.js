@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 import { sendOrderReceiptEmail } from '../services/emailService.js'
 import { getAuthoritativeProduct } from './cartController.js'
+import { calcTotals } from '../utils/pricing.js'
 
 /**
  * GET /api/orders (Admin Only)
@@ -147,9 +148,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
   const subtotal = Number(
     sanitizedItems.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)
   )
-  const shippingCost = shippingMethod === 'priority' ? 25.0 : 0.0
-  const tax = Number((subtotal * 0.08).toFixed(2))
-  const totalAmount = Number((subtotal + shippingCost + tax).toFixed(2))
+  const { shippingCost, tax, totalAmount } = calcTotals(subtotal, shippingMethod)
 
   const orderNumber = `DEV-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 

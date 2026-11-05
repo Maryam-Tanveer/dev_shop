@@ -1,6 +1,6 @@
 import Product from '../models/Product.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { PRODUCTS_DATABASE, RAW_DATABASE, toDetailProduct } from '../data/products/index.js'
+import { calcTotals } from '../utils/pricing.js'
 
 /**
  * Authoritative product lookup from MongoDB with seamless master database fallback
@@ -116,24 +116,28 @@ export const priceCart = asyncHandler(async (req, res) => {
     })
   }
 
-  // Calculate authoritative server totals
+  const shippingMethod = req.body.shippingMethod || 'standard'
+
+  // Calculate authoritative server totals using centralized calcTotals
   const subtotal = Number(
     enrichedItems.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)
   )
-  const tax = Number((subtotal * 0.08).toFixed(2))
-  const shipping = subtotal === 0 || subtotal > 200 ? 0 : 25.00
-  const total = Number((subtotal + tax + shipping).toFixed(2))
+  const totals = calcTotals(subtotal, shippingMethod)
   const itemCount = enrichedItems.reduce((acc, item) => acc + item.quantity, 0)
 
   res.json({
     success: true,
     data: {
       items: enrichedItems,
-      subtotal,
-      tax,
-      shipping,
-      total,
-      itemCount
-    }
+      subtotal: totals.subtotal,
+      tax: totals.tax,
+      shipping: totals.shippingCost,
+      shippingCost: totals.shippingCost,
+      shippingMethod: totals.shippingMethod,
+      total: totals.totalAmount,
+      totalAmount: totals.totalAmount,
+      freeShippingThreshold: totals.freeShippingThreshold,
+      itemCount,
+    },
   })
 })

@@ -31,7 +31,6 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
 
   const items = cartItems
   const [shippingMethod, setShippingMethod] = useState('standard') // 'standard' | 'priority'
-  const [discountAmount, setDiscountAmount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('CHECKOUT')
   const [toast, setToast] = useState(null)
@@ -85,7 +84,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
   const shippingCost = items.length > 0 ? (shippingMethod === 'priority' ? 25.00 : 0.00) : 0.00
   const subtotal = items.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0)
   const tax = Number((subtotal * 0.08).toFixed(2))
-  const totalAmount = Number((Math.max(0, subtotal - discountAmount + shippingCost + tax)).toFixed(2))
+  const totalAmount = Number((subtotal + shippingCost + tax).toFixed(2))
 
   const handleNavClick = (navItem) => {
     setActiveNav(navItem)
@@ -330,10 +329,6 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
                 items={items}
                 shippingCost={shippingCost}
                 onEditBag={() => (onNavigate ? onNavigate('CART') : navigate('/cart'))}
-                onApplyPromo={(amount, code) => {
-                  setDiscountAmount(amount)
-                  showToast(`Promo ${code} applied: -$${amount}`)
-                }}
               />
 
               <PaymentMethodCard

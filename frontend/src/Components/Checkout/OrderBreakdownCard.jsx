@@ -1,32 +1,15 @@
-import { useState } from 'react'
-import { ShieldCheck, Tag } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 
 export default function OrderBreakdownCard({
   items = [],
   shippingCost = 0,
-  taxRate = 0.08875,
+  taxRate = 0.08,
   onEditBag,
-  onApplyPromo
 }) {
-  const [promoCode, setPromoCode] = useState('')
-  const [discount, setDiscount] = useState(0)
-
   // Subtotal & Exact Breakdown matching items in cart
   const subtotal = items.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0)
   const tax = Number((subtotal * taxRate).toFixed(2))
-  const total = Number((Math.max(0, subtotal - discount + shippingCost + tax)).toFixed(2))
-
-  const handleApplyPromo = (e) => {
-    e.preventDefault()
-    if (!promoCode.trim()) return
-    if (promoCode.trim().toUpperCase() === 'DEVSHOP' || promoCode.trim().toUpperCase() === 'HEAT50') {
-      setDiscount(50)
-      if (onApplyPromo) onApplyPromo(50, promoCode.trim().toUpperCase())
-    } else {
-      setDiscount(20)
-      if (onApplyPromo) onApplyPromo(20, promoCode.trim().toUpperCase())
-    }
-  }
+  const total = Number((subtotal + shippingCost + tax).toFixed(2))
 
   return (
     <div className="bg-white rounded-3xl border border-neutral-200/90 p-6 sm:p-7 shadow-xs">
@@ -92,25 +75,6 @@ export default function OrderBreakdownCard({
         )))}
       </div>
 
-      {/* Promo Code Input */}
-      <form onSubmit={handleApplyPromo} className="flex gap-2 mb-6">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={promoCode}
-            onChange={(e) => setPromoCode(e.target.value)}
-            placeholder="PROMO CODE OR GIFT VOUCHER"
-            className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-800 placeholder-neutral-400 transition outline-none"
-          />
-        </div>
-        <button
-          type="submit"
-          className="bg-[#1a1a1a] hover:bg-neutral-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shadow-xs active:scale-95"
-        >
-          Apply
-        </button>
-      </form>
-
       {/* Calculations */}
       <div className="space-y-2.5 text-xs border-t border-neutral-100 pt-4 mb-5">
         <div className="flex items-center justify-between text-neutral-600 font-medium">
@@ -118,28 +82,18 @@ export default function OrderBreakdownCard({
           <span className="font-bold text-neutral-900">${subtotal.toFixed(2)}</span>
         </div>
 
-        {discount > 0 && (
-          <div className="flex items-center justify-between text-[#c81d25] font-medium">
-            <span className="flex items-center gap-1">
-              <Tag className="w-3 h-3" />
-              <span>Promo Discount</span>
-            </span>
-            <span className="font-bold">-${discount.toFixed(2)}</span>
-          </div>
-        )}
-
         <div className="flex items-center justify-between text-neutral-600 font-medium">
           <span className="flex items-center gap-1">
             <span>Shipping</span>
             <ShieldCheck className="w-3.5 h-3.5 text-[#c81d25]" />
           </span>
           <span className="font-bold text-[#c81d25]">
-            {shippingCost === 0 ? 'FREE (EXPRESS)' : `$${shippingCost.toFixed(2)}`}
+            {shippingCost === 0 ? 'FREE (STANDARD)' : `$${shippingCost.toFixed(2)}`}
           </span>
         </div>
 
         <div className="flex items-center justify-between text-neutral-600 font-medium">
-          <span>Estimated Sales Tax (NYC 8.875%)</span>
+          <span>Estimated Sales Tax (8%)</span>
           <span className="font-bold text-neutral-900">${tax.toFixed(2)}</span>
         </div>
       </div>
