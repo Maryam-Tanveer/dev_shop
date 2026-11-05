@@ -50,7 +50,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     city: defaultAddr?.city || '',
     state: defaultAddr?.state || '',
     zipCode: defaultAddr?.zipCode || '',
-    country: defaultAddr?.country || 'US',
+    country: defaultAddr?.country || 'Pakistan',
   })
 
   const [contactInfo, setContactInfo] = useState({
@@ -74,7 +74,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
           city: def.city || '',
           state: def.state || '',
           zipCode: def.zipCode || '',
-          country: def.country || 'US',
+          country: def.country || 'Pakistan',
         })
       }
     }
@@ -106,9 +106,9 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
       return
     }
 
-    const resolvedAddress = shippingAddress.streetAddress || shippingAddress.address || 'Vault Delivery Hub'
-    const resolvedCity = shippingAddress.city || 'New York'
-    const resolvedZip = shippingAddress.postalCode || shippingAddress.zipCode || '10012'
+    const resolvedAddress = shippingAddress.streetAddress || shippingAddress.address || 'Delivery Hub'
+    const resolvedCity = shippingAddress.city || 'Chak Jhumra'
+    const resolvedZip = shippingAddress.postalCode || shippingAddress.zipCode || '38000'
 
     const checkoutPayload = {
       email: contactInfo.email || currentUser?.email || 'collector@devshop.io',
@@ -124,9 +124,9 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
         address: resolvedAddress,
         apartment: shippingAddress.apartment || '',
         city: resolvedCity,
-        state: shippingAddress.state || 'NY',
+        state: shippingAddress.state || 'Punjab',
         zipCode: resolvedZip,
-        country: shippingAddress.country || 'US',
+        country: shippingAddress.country || 'Pakistan',
       },
       shippingMethod,
     }
