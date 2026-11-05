@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Clock, Bookmark, ArrowRight, RotateCw } from 'lucide-react'
 import { api } from '../../services/api'
-import { BLOG_POSTS as FALLBACK_POSTS } from '../../data/blog'
 
 export default function BlogGrid({
   activeFilter = 'all',
@@ -9,7 +8,7 @@ export default function BlogGrid({
   onBookmarkPost,
   bookmarks = {}
 }) {
-  const [posts, setPosts] = useState(FALLBACK_POSTS)
+  const [posts, setPosts] = useState([])
   const [visibleCount, setVisibleCount] = useState(6)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 

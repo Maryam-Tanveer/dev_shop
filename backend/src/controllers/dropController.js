@@ -1,31 +1,36 @@
+import Drop from '../models/Drop.js'
 import { HERO_DROP, FESTIVAL_PASS } from '../data/mockData.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 import { sendDropAlertEmail } from '../services/emailService.js'
 
-export const getAllDrops = (req, res) => {
+export const getAllDrops = asyncHandler(async (req, res) => {
+  const hero = (await Drop.findOne({ type: 'hero' }).lean()) || HERO_DROP
+  const festivalPass = (await Drop.findOne({ type: 'festival-pass' }).lean()) || FESTIVAL_PASS
   res.json({
     success: true,
     data: {
-      hero: HERO_DROP,
-      festivalPass: FESTIVAL_PASS,
+      hero,
+      festivalPass,
     },
   })
-}
+})
 
-export const getHeroDrop = (req, res) => {
+export const getHeroDrop = asyncHandler(async (req, res) => {
+  const hero = (await Drop.findOne({ type: 'hero' }).lean()) || HERO_DROP
   res.json({
     success: true,
-    data: HERO_DROP,
+    data: hero,
   })
-}
+})
 
-export const getFestivalPass = (req, res) => {
+export const getFestivalPass = asyncHandler(async (req, res) => {
+  const pass = (await Drop.findOne({ type: 'festival-pass' }).lean()) || FESTIVAL_PASS
   res.json({
     success: true,
-    data: FESTIVAL_PASS,
+    data: pass,
   })
-}
+})
 
 /**
  * POST /api/drops/subscribe-alert

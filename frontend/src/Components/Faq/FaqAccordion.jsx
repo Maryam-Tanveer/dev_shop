@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Plus, Minus } from 'lucide-react'
 import { api } from '../../services/api'
-import { FAQ_DATA as FALLBACK_FAQS } from '../../data/faq'
 
 export default function FaqAccordion({ activeCategory }) {
-  const [faqs, setFaqs] = useState(FALLBACK_FAQS)
+  const [faqs, setFaqs] = useState([])
   const [openId, setOpenId] = useState('track-order')
 
   useEffect(() => {

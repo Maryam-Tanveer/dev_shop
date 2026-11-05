@@ -46,8 +46,9 @@ export default function RecentDropOrders({
   }, [])
 
   const filteredOrders = orders.filter((order) => {
-    if (filter === 'ACTIVE') return order.statusType === 'in-vault'
-    if (filter === 'DELIVERED') return order.statusType === 'delivered'
+    const isDelivered = (order.status || '').toLowerCase() === 'delivered'
+    if (filter === 'ACTIVE') return !isDelivered
+    if (filter === 'DELIVERED') return isDelivered
     return true
   })
 
@@ -91,11 +92,19 @@ export default function RecentDropOrders({
         </div>
       ) : (
         filteredOrders.map((order) => {
-        const isInVault = order.statusType === 'in-vault'
+        const isDelivered = (order.status || '').toLowerCase() === 'delivered'
+        const isInVault = !isDelivered
+        const placedDate = order.createdAt
+          ? new Date(order.createdAt).toLocaleDateString()
+          : (order.placedDate || 'Recently')
+        const formattedTotal = order.totalAmount != null
+          ? `$${Number(order.totalAmount).toFixed(2)}`
+          : (order.formattedTotal || `$${Number(order.subtotal || 0).toFixed(2)}`)
+        const carrier = order.carrier || 'FedEx Priority Air'
 
         return (
           <div
-            key={order.id}
+            key={order._id || order.id || order.orderNumber}
             className="bg-white rounded-3xl border border-neutral-200/90 p-5 sm:p-7 shadow-xs"
           >
             {/* Order Header */}
@@ -108,16 +117,16 @@ export default function RecentDropOrders({
                   {isInVault ? (
                     <span className="bg-rose-50 text-[#c81d25] border border-rose-200 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#c81d25] animate-pulse" />
-                      <span>{order.status}</span>
+                      <span>{order.status || 'In Transit'}</span>
                     </span>
                   ) : (
                     <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                      <span>{order.status}</span>
+                      <span>{order.status || 'Delivered'}</span>
                     </span>
                   )}
                 </div>
                 <p className="text-[11px] text-neutral-500 font-medium">
-                  Placed on {order.placedDate} • {order.carrier}
+                  Placed on {placedDate} • {carrier}
                 </p>
               </div>
 
@@ -130,7 +139,7 @@ export default function RecentDropOrders({
                     isInVault ? 'text-[#c81d25]' : 'text-neutral-900'
                   }`}
                 >
-                  {order.formattedTotal}
+                  {formattedTotal}
                 </span>
               </div>
             </div>
@@ -174,39 +183,42 @@ export default function RecentDropOrders({
               </div>
             )}
 
-            {/* Items in Order */}
-            <div className="divide-y divide-neutral-100">
-              {order.items.map((item) => (
-                <div key={item.id} className="py-4 flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-neutral-100 p-2 flex items-center justify-center flex-shrink-0 border border-neutral-200/80">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="max-h-full max-w-full object-contain"
-                    />
+              {order.items.map((item, itIdx) => {
+                const itemQty = item.quantity ?? item.qty ?? 1
+                const itemPrice = typeof item.price === 'number' ? item.price : Number(item.price) || 0
+                const itemSpecs = item.specs || (item.size && item.colorway ? `Size: ${item.size} • ${item.colorway}` : item.size ? `Size: ${item.size}` : 'Standard')
+
+                return (
+                  <div key={item.id || item.productId || itIdx} className="py-4 flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-neutral-100 p-2 flex items-center justify-center flex-shrink-0 border border-neutral-200/80">
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block mb-0.5">
+                        {item.category || 'Vault Drop'}
+                      </span>
+                      <h3 className="text-xs sm:text-sm font-bold text-neutral-900 truncate">
+                        {item.title}
+                      </h3>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        {itemSpecs}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-sm font-black text-neutral-900">
+                        ${itemPrice.toFixed(2)}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 block">
+                        Qty: {itemQty}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block mb-0.5">
-                      {item.category}
-                    </span>
-                    <h3 className="text-xs sm:text-sm font-bold text-neutral-900 truncate">
-                      {item.title}
-                    </h3>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">
-                      {item.specs}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-sm font-black text-neutral-900">
-                      ${item.price.toFixed(2)}
-                    </span>
-                    <span className="text-[10px] text-neutral-400 block">
-                      Qty: {item.qty}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                )
+              })}
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-5 border-t border-neutral-100">

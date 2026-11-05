@@ -4,6 +4,7 @@ import {
   getMyOrders,
   getOrderById,
   createOrder,
+  updateOrder,
 } from '../controllers/orderController.js'
 import { validate } from '../middleware/validate.js'
 import {
@@ -30,5 +31,8 @@ router.post('/', optionalAuth, validate(createOrderSchema), createOrder)
 
 // GET /api/orders/:id - Authenticated users can only view their own order; Admins can view any order
 router.get('/:id', requireAuth, validate(orderIdParamSchema), getOrderById)
+
+// PATCH /api/orders/:id - Admin updates order status/tracking/carrier
+router.patch('/:id', requireAdmin, updateOrder)
 
 export default router

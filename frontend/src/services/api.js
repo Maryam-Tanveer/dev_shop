@@ -283,6 +283,16 @@ export const api = {
   },
 
   /**
+   * Update an order (Admin only: status, carrier, trackingNumber, estimatedDelivery)
+   */
+  async updateOrder(id, updateData) {
+    return request(`/orders/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updateData),
+    })
+  },
+
+  /**
    * Create Stripe Checkout Session (PCI-DSS compliant hosted checkout)
    */
   async createCheckoutSession(checkoutData) {

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
-import { FEATURED_BLOG_POSTS as FALLBACK_POSTS } from '../../data/blog'
 
 export default function BlogSection({ onReadPost }) {
-  const [posts, setPosts] = useState(FALLBACK_POSTS)
+  const [posts, setPosts] = useState([])
 
   useEffect(() => {
     let isMounted = true

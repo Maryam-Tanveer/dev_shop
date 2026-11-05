@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ArrowUpRight, ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
-import { COLLECTIONS_DATA as FALLBACK_DATA } from '../../data/collections'
 
 export default function CollectionsGrid({
   activeFilter = 'all',
   onSelectCollection
 }) {
-  const [collections, setCollections] = useState(FALLBACK_DATA)
+  const [collections, setCollections] = useState([])
 
   useEffect(() => {
     let isMounted = true

@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { api } from '../../services/api'
-import { FEATURED_LANDING_COLLECTIONS as FALLBACK_COLLECTIONS } from '../../data/collections'
 
 export default function CollectionsSection({ onSelectCollection }) {
   const navigate = useNavigate()
-  const [collections, setCollections] = useState(FALLBACK_COLLECTIONS)
+  const [collections, setCollections] = useState([])
 
   useEffect(() => {
     let isMounted = true

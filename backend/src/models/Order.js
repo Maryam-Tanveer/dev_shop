@@ -88,6 +88,20 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    carrier: {
+      type: String,
+      default: 'FedEx Priority Air',
+    },
+    estimatedDelivery: {
+      type: String,
+      default: null,
+    },
+    statusHistory: [
+      {
+        status: { type: String, required: true },
+        at: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,

@@ -3,8 +3,19 @@ import dotenv from 'dotenv'
 import Product from '../models/Product.js'
 import User from '../models/User.js'
 import Order from '../models/Order.js'
+import Blog from '../models/Blog.js'
+import Collection from '../models/Collection.js'
+import Faq from '../models/Faq.js'
+import Drop from '../models/Drop.js'
 import { RAW_DATABASE, toDetailProduct } from '../data/products/index.js'
-import { RECENT_DROP_ORDERS } from '../data/mockData.js'
+import {
+  RECENT_DROP_ORDERS,
+  BLOGS,
+  COLLECTIONS,
+  FAQ_DATA,
+  HERO_DROP,
+  FESTIVAL_PASS,
+} from '../data/mockData.js'
 import { USERS } from '../data/users.js'
 
 dotenv.config()
@@ -27,6 +38,10 @@ const seedDatabase = async () => {
     await Product.deleteMany({})
     await User.deleteMany({})
     await Order.deleteMany({})
+    await Blog.deleteMany({})
+    await Collection.deleteMany({})
+    await Faq.deleteMany({})
+    await Drop.deleteMany({})
 
     // 2. Prepare Products
     console.log('[SEED] Inserting products...')
@@ -70,56 +85,91 @@ const seedDatabase = async () => {
     const insertedProducts = await Product.insertMany(productList)
     console.log(`[SEED] ✓ Inserted ${insertedProducts.length} products.`)
 
-      console.log('[SEED] Inserting default vault users...')
-      const userList = USERS.map((u) => ({
-        name: u.name,
-        email: u.email,
-        password: process.env.DEV_SEED_PASSWORD || 'password123',
-        role: u.role || 'member',
-        avatar: u.avatar || '',
-        memberTier: u.tier || 'Core Vault Member',
-      }))
+    // 3. Prepare Users
+    console.log('[SEED] Inserting default vault users...')
+    const userList = USERS.map((u) => ({
+      name: u.name,
+      email: u.email,
+      password: process.env.DEV_SEED_PASSWORD || 'password123',
+      role: u.role || 'member',
+      avatar: u.avatar || '',
+      memberTier: u.tier || 'Core Vault Member',
+    }))
 
-      for (const userData of userList) {
-        await User.create(userData)
-      }
-      console.log(`[SEED] ✓ Inserted ${userList.length} users with credentials.`)
+    for (const userData of userList) {
+      await User.create(userData)
+    }
+    console.log(`[SEED] ✓ Inserted ${userList.length} users with credentials.`)
 
     // 4. Prepare Orders
     console.log('[SEED] Inserting sample orders...')
-    const orderList = RECENT_DROP_ORDERS.map((o) => ({
-      orderNumber: o.orderNumber || o.id,
-      userEmail: 'collector@devshop.io',
-      items: (o.items || []).map((item) => ({
-        productId: item.id || 'deal-1',
-        title: item.title || item.name || 'Drop Item',
-        image: item.image || '',
-        price: item.price || 180,
-        quantity: item.qty || item.quantity || 1,
-        size: item.size || 'M',
-        colorway: item.color || 'Default',
-      })),
-      shippingAddress: {
-        firstName: 'Alex',
-        lastName: 'Mercer',
-        address: '124 Mercer St',
-        city: 'New York',
-        state: 'NY',
-        zipCode: '10012',
-        country: 'US',
-      },
-      subtotal: o.total || 210,
-      totalAmount: o.total || 210,
-      status: ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].includes(o.status)
+    const orderList = RECENT_DROP_ORDERS.map((o) => {
+      const orderStatus = ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].includes(o.status)
         ? o.status
-        : 'Confirmed',
-      trackingNumber: o.tracking || 'DEV-TRK-88912',
-    }))
+        : 'Confirmed'
+
+      return {
+        orderNumber: o.orderNumber || o.id,
+        userEmail: 'collector@devshop.io',
+        items: (o.items || []).map((item) => ({
+          productId: item.id || 'deal-1',
+          title: item.title || item.name || 'Drop Item',
+          image: item.image || '',
+          price: item.price || 180,
+          quantity: item.qty || item.quantity || 1,
+          size: item.size || 'M',
+          colorway: item.color || 'Default',
+        })),
+        shippingAddress: {
+          firstName: 'Alex',
+          lastName: 'Mercer',
+          address: '124 Mercer St',
+          city: 'New York',
+          state: 'NY',
+          zipCode: '10012',
+          country: 'US',
+        },
+        subtotal: o.total || 210,
+        totalAmount: o.total || 210,
+        status: orderStatus,
+        paymentStatus: 'paid',
+        carrier: o.carrier || 'FedEx Priority Air',
+        estimatedDelivery: '2-4 Business Days',
+        statusHistory: [
+          { status: 'Confirmed', at: new Date(Date.now() - 86400000 * 2) },
+          { status: orderStatus, at: new Date() },
+        ],
+        trackingNumber: o.tracking || 'DEV-TRK-88912',
+      }
+    })
 
     if (orderList.length > 0) {
       await Order.insertMany(orderList)
       console.log(`[SEED] ✓ Inserted ${orderList.length} sample orders.`)
     }
+
+    // 5. Prepare Blogs
+    console.log('[SEED] Inserting blogs...')
+    const insertedBlogs = await Blog.insertMany(BLOGS)
+    console.log(`[SEED] ✓ Inserted ${insertedBlogs.length} blogs.`)
+
+    // 6. Prepare Collections
+    console.log('[SEED] Inserting collections...')
+    const insertedCollections = await Collection.insertMany(COLLECTIONS)
+    console.log(`[SEED] ✓ Inserted ${insertedCollections.length} collections.`)
+
+    // 7. Prepare FAQs
+    console.log('[SEED] Inserting FAQs...')
+    const insertedFaqs = await Faq.insertMany(FAQ_DATA)
+    console.log(`[SEED] ✓ Inserted ${insertedFaqs.length} FAQs.`)
+
+    // 8. Prepare Drops
+    console.log('[SEED] Inserting hero drop and festival pass...')
+    await Drop.insertMany([
+      { type: 'hero', ...HERO_DROP },
+      { type: 'festival-pass', ...FESTIVAL_PASS },
+    ])
+    console.log('[SEED] ✓ Inserted Drops into DB.')
 
     console.log('[SEED] 🚀 Database seeding completed successfully!')
     process.exit(0)

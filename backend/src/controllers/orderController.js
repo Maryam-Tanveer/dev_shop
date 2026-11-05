@@ -170,6 +170,14 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     totalAmount,
     status: initialStatus,
     paymentStatus: initialPaymentStatus,
+    carrier: (shippingMethod || '').toLowerCase() === 'priority' ? 'FedEx Priority Air' : 'Standard Authenticated Courier',
+    estimatedDelivery: (shippingMethod || '').toLowerCase() === 'priority' ? 'Tomorrow by 12:00 PM' : '2-4 Business Days',
+    statusHistory: [
+      {
+        status: initialStatus,
+        at: new Date(),
+      },
+    ],
     createdAt: new Date().toISOString(),
   }
 
@@ -195,3 +203,44 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     message: `Order ${orderNumber} placed successfully. An authenticated invoice has been dispatched to ${email}.`,
   })
 })
+
+/**
+ * PATCH /api/orders/:id (Admin only)
+ * Updates order status, carrier, trackingNumber, or estimatedDelivery
+ */
+export const updateOrder = asyncHandler(async (req, res, next) => {
+  const { id } = req.params
+  const { status, carrier, trackingNumber, estimatedDelivery } = req.body
+
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(id)
+  const query = isObjectId ? { $or: [{ _id: id }, { orderNumber: id }] } : { orderNumber: id }
+  const order = await Order.findOne(query)
+
+  if (!order) {
+    return next(new AppError(`Order '${id}' not found`, 404))
+  }
+
+  if (carrier !== undefined) order.carrier = carrier
+  if (trackingNumber !== undefined) order.trackingNumber = trackingNumber
+  if (estimatedDelivery !== undefined) order.estimatedDelivery = estimatedDelivery
+
+  if (status && status !== order.status) {
+    order.status = status
+    if (!Array.isArray(order.statusHistory)) {
+      order.statusHistory = []
+    }
+    order.statusHistory.push({
+      status,
+      at: new Date(),
+    })
+  }
+
+  await order.save()
+
+  res.json({
+    success: true,
+    data: order,
+    message: `Order ${order.orderNumber} updated successfully`,
+  })
+})
+

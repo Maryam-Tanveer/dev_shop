@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { HelpCircle, Truck, CreditCard, RotateCcw, ShieldCheck } from 'lucide-react'
 import { api } from '../../services/api'
-import { FAQ_CATEGORIES as FALLBACK_CATEGORIES } from '../../data/faq'
 
 const iconMap = {
   shipping: Truck,
@@ -16,7 +15,7 @@ export default function FaqHero({
   onSelectCategory,
   onBackToHome
 }) {
-  const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
+  const [categories, setCategories] = useState([])
 
   useEffect(() => {
     let isMounted = true

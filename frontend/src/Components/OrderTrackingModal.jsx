@@ -5,37 +5,35 @@ export default function OrderTrackingModal({ order, isOpen, onClose }) {
   if (!isOpen || !order) return null
 
   const orderNum = order.orderNumber || order.id || 'DEV-VAULT-ORDER'
-  const carrier = order.carrier || 'DHL Express Priority Air'
-  const waybill = `DEV-EXP-${orderNum.replace(/[^0-9]/g, '') || '984210'}`
-  const estDelivery = order.estDelivery || '3 Business Days (Oct 28 – Oct 30)'
-  const status = order.status || 'In Transit'
+  const carrier = order.carrier || 'FedEx Priority Air'
+  const waybill = order.trackingNumber || `DEV-EXP-${orderNum.replace(/[^0-9]/g, '') || '984210'}`
+  const estDelivery = order.estimatedDelivery || order.estDelivery || '2-4 Business Days'
+  const status = order.status || 'Confirmed'
 
-  const checkpoints = [
-    {
-      time: 'Oct 24, 18:45 EST',
-      location: 'JFK Air Cargo Hub, NY',
-      desc: 'High-value Vault allocation cleared security inspection. Transferred to air transit.',
-      done: true,
-    },
-    {
-      time: 'Oct 24, 14:10 EST',
-      location: 'Dev Shop Vault Facility #04, Brooklyn NY',
-      desc: 'Physical micro-stitch inspection verified. Encrypted NFC authenticity tag attached.',
-      done: true,
-    },
-    {
-      time: 'Oct 24, 11:30 EST',
-      location: 'Vault Order Processing',
-      desc: 'Payment captured and allocation secured in dedicated deadstock locker.',
-      done: true,
-    },
-    {
-      time: 'Estimated Oct 28',
-      location: 'Local Delivery Facility',
-      desc: 'Package dispatched for signature-required courier handoff.',
-      done: false,
-    },
-  ]
+  const statusUpper = (status || '').toUpperCase()
+  const statusStep = statusUpper === 'DELIVERED'
+    ? 4
+    : statusUpper === 'SHIPPED'
+    ? 3
+    : statusUpper === 'PROCESSING'
+    ? 2
+    : 1
+
+  const checkpoints = Array.isArray(order.statusHistory) && order.statusHistory.length > 0
+    ? order.statusHistory.map((sh, idx) => ({
+        time: sh.at ? new Date(sh.at).toLocaleString() : 'Recent',
+        location: idx === 0 ? 'Dev Shop Authentication Vault' : 'Transit Logistics Hub',
+        desc: `Status milestone: ${sh.status}. Verified by Dev Vault specialist.`,
+        done: true,
+      }))
+    : [
+        {
+          time: order.createdAt ? new Date(order.createdAt).toLocaleString() : 'Recent',
+          location: 'Dev Shop Authentication Vault',
+          desc: `Order received and verified under status: ${status}.`,
+          done: true,
+        },
+      ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
@@ -84,14 +82,17 @@ export default function OrderTrackingModal({ order, isOpen, onClose }) {
         {/* 4-Step Stepper Bar */}
         <div className="mb-8">
           <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-mono uppercase tracking-wider mb-2">
-            <span className="text-emerald-400 font-bold">1. Confirmed</span>
-            <span className="text-emerald-400 font-bold">2. NFC Scanned</span>
-            <span className="text-[#ff4d5a] font-black animate-pulse">3. In Transit</span>
-            <span className="text-neutral-500">4. Delivered</span>
+            <span className={statusStep >= 1 ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>1. Confirmed</span>
+            <span className={statusStep >= 2 ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>2. Processing</span>
+            <span className={statusStep === 3 ? 'text-[#ff4d5a] font-black animate-pulse' : statusStep > 3 ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>3. Shipped</span>
+            <span className={statusStep >= 4 ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>4. Delivered</span>
           </div>
 
           <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden p-0.5">
-            <div className="h-full bg-gradient-to-r from-emerald-500 via-[#c81d25] to-[#c81d25] rounded-full w-[70%]" />
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 via-[#c81d25] to-[#c81d25] rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, Math.max(25, statusStep * 25))}%` }}
+            />
           </div>
         </div>
 
