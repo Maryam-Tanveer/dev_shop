@@ -9,7 +9,7 @@ import { generateToken, extractToken } from '../middleware/authMiddleware.js'
 import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { getDBStatus } from '../config/db.js'
+import { getDBStatus, connectDB } from '../config/db.js'
 import { OAuth2Client } from 'google-auth-library'
 import { revokeToken } from '../services/tokenBlacklist.js'
 
@@ -71,39 +71,39 @@ export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body
   const normalizedEmail = email ? email.trim().toLowerCase() : ''
 
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      const user = await User.findOne({ email: normalizedEmail }).select('+password')
-      if (user) {
-        const isMatch = await user.matchPassword(password)
+  // Ensure DB connection is established (critical for serverless cold starts)
+  await connectDB()
 
-        if (!isMatch) {
-          return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
-        }
-        const token = generateToken(user)
-        const safeUser = {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          avatar: user.avatar,
-          tier: user.memberTier,
-        }
+  try {
+    const user = await User.findOne({ email: normalizedEmail }).select('+password')
+    if (user) {
+      const isMatch = await user.matchPassword(password)
 
-        // Set secure httpOnly cookie
-        res.cookie('token', token, getCookieOptions(req))
-
-        return res.json({
-          success: true,
-          token,
-          user: safeUser,
-          message: 'Successfully authenticated.',
-        })
+      if (!isMatch) {
+        return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
       }
-    } catch (e) {
-      console.warn('[AUTH DB LOGIN ERROR]:', e.message)
+      const token = generateToken(user)
+      const safeUser = {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        tier: user.memberTier,
+      }
+
+      // Set secure httpOnly cookie
+      res.cookie('token', token, getCookieOptions(req))
+
+      return res.json({
+        success: true,
+        token,
+        user: safeUser,
+        message: 'Successfully authenticated.',
+      })
     }
+  } catch (e) {
+    console.warn('[AUTH DB LOGIN ERROR]:', e.message)
   }
 
   // Fallback to demo users in USERS (strictly permitted in development environment only)
@@ -169,44 +169,43 @@ export const register = asyncHandler(async (req, res, next) => {
   const normalizedEmail = email ? email.trim().toLowerCase() : ''
   const trimmedName = name && name.trim() ? name.trim() : normalizedEmail.split('@')[0]
 
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      const existing = await User.findOne({ email: normalizedEmail })
-      if (existing) {
-        return next(
-          new AppError('An account with this email is already registered. Please sign in instead.', 409)
-        )
-      }
-      const newUser = await User.create({ name: trimmedName, email: normalizedEmail, password })
-      const token = generateToken(newUser)
-      const safeUser = {
-        id: newUser._id.toString(),
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        avatar: newUser.avatar,
-        tier: newUser.memberTier,
-      }
+  await connectDB()
 
-      res.cookie('token', token, getCookieOptions(req))
+  try {
+    const existing = await User.findOne({ email: normalizedEmail })
+    if (existing) {
+      return next(
+        new AppError('An account with this email is already registered. Please sign in instead.', 409)
+      )
+    }
+    const newUser = await User.create({ name: trimmedName, email: normalizedEmail, password })
+    const token = generateToken(newUser)
+    const safeUser = {
+      id: newUser._id.toString(),
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      avatar: newUser.avatar,
+      tier: newUser.memberTier,
+    }
 
-      return res.status(201).json({
-        success: true,
-        token,
-        user: safeUser,
-        message: 'Account created successfully in database.',
-      })
-    } catch (err) {
-      if (err.code === 11000) {
-        return next(
-          new AppError('An account with this email is already registered. Please sign in instead.', 409)
-        )
-      }
-      console.warn('[AUTH DB REGISTER ERROR]:', err.message)
-      if (process.env.NODE_ENV === 'production') {
-        return next(new AppError('Database error during account registration.', 500))
-      }
+    res.cookie('token', token, getCookieOptions(req))
+
+    return res.status(201).json({
+      success: true,
+      token,
+      user: safeUser,
+      message: 'Account created successfully in database.',
+    })
+  } catch (err) {
+    if (err.code === 11000) {
+      return next(
+        new AppError('An account with this email is already registered. Please sign in instead.', 409)
+      )
+    }
+    console.warn('[AUTH DB REGISTER ERROR]:', err.message)
+    if (process.env.NODE_ENV === 'production') {
+      return next(new AppError('Database error during account registration: ' + err.message, 500))
     }
   }
 
@@ -304,10 +303,9 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
   const { email, name, avatar } = googleData
 
   // 2. Prevent account takeover: Admin accounts cannot be hijacked via Google OAuth
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      let dbUser = await User.findOne({ email })
+  await connectDB()
+  try {
+    let dbUser = await User.findOne({ email })
       if (dbUser) {
         if (dbUser.role === 'admin') {
           return next(
@@ -348,7 +346,6 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
         return next(new AppError('Database error during Google authentication.', 500))
       }
     }
-  }
 
   // Refuse in-memory fallback in production
   if (process.env.NODE_ENV === 'production') {

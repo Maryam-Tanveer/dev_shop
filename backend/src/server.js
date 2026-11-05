@@ -32,8 +32,16 @@ app.set('trust proxy', 1)
 const PORT = process.env.PORT || 5000
 const NODE_ENV = process.env.NODE_ENV || 'production'
 
-// Connect to MongoDB Database (with seamless offline fallback)
+// Connect to MongoDB Database (with connection caching for serverless)
 connectDB()
+app.use(async (req, res, next) => {
+  try {
+    await connectDB()
+  } catch (err) {
+    console.warn('[DB Middleware Notice]:', err.message)
+  }
+  next()
+})
 
 // 1. HTTP Security Headers
 app.use(
