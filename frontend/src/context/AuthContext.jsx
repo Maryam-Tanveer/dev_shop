@@ -40,10 +40,17 @@ export function AuthProvider({ children }) {
     api
       .getMe(token)
       .then((res) => {
-        if (isMounted && res.success && res.user) {
-          setCurrentUser(res.user)
-          if (res.token) setToken(res.token)
-          localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(res.user))
+        if (isMounted) {
+          if (res && res.success && res.user) {
+            setCurrentUser(res.user)
+            if (res.token) setToken(res.token)
+            localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(res.user))
+          } else {
+            setCurrentUser(null)
+            setToken(null)
+            localStorage.removeItem(JWT_STORAGE_KEY)
+            localStorage.removeItem(CURRENT_USER_STORAGE_KEY)
+          }
         }
       })
       .catch((err) => {

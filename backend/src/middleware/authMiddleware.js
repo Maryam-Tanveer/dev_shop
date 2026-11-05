@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
 import { findUserById, sanitizeUser } from '../data/users.js'
 import User from '../models/User.js'
-import { getDBStatus } from '../config/db.js'
+import { getDBStatus, connectDB } from '../config/db.js'
 
 dotenv.config()
 
@@ -34,27 +34,25 @@ export const generateToken = (user) => {
 /**
  * Resolve user by id from MongoDB or in-memory fallback
  */
-const resolveUserById = async (id) => {
+export const resolveUserById = async (id) => {
   if (!id) return null
-  const dbStatus = getDBStatus()
-  if (dbStatus.connected) {
-    try {
-      const dbUser = await User.findById(id).lean()
-      if (dbUser) {
-        return {
-          id: dbUser._id.toString(),
-          name: dbUser.name,
-          email: dbUser.email,
-          role: dbUser.role || 'member',
-          avatar: dbUser.avatar,
-          memberTier: dbUser.memberTier,
-          tier: dbUser.memberTier,
-          addresses: dbUser.addresses || [],
-        }
+  await connectDB()
+  try {
+    const dbUser = await User.findById(id).lean()
+    if (dbUser) {
+      return {
+        id: dbUser._id.toString(),
+        name: dbUser.name,
+        email: dbUser.email,
+        role: dbUser.role || 'member',
+        avatar: dbUser.avatar,
+        memberTier: dbUser.memberTier,
+        tier: dbUser.memberTier,
+        addresses: dbUser.addresses || [],
       }
-    } catch {
-      // Continue to in-memory check
     }
+  } catch {
+    // Continue to in-memory check
   }
 
   const memUser = findUserById(id)

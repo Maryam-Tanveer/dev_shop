@@ -5,13 +5,14 @@ import {
   comparePassword,
   sanitizeUser,
 } from '../data/users.js'
-import { generateToken, extractToken } from '../middleware/authMiddleware.js'
+import jwt from 'jsonwebtoken'
+import { generateToken, extractToken, getJwtSecret, resolveUserById } from '../middleware/authMiddleware.js'
 import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { getDBStatus, connectDB } from '../config/db.js'
 import { OAuth2Client } from 'google-auth-library'
-import { revokeToken } from '../services/tokenBlacklist.js'
+import { revokeToken, isTokenRevoked } from '../services/tokenBlacklist.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || undefined)
 
@@ -245,12 +246,57 @@ export const register = asyncHandler(async (req, res, next) => {
 
 /**
  * Get current authenticated user profile
+ * Returns user if authenticated, or success: false gracefully if guest without 401 error
  */
 export const getMe = asyncHandler(async (req, res) => {
-  res.json({
-    success: true,
-    user: req.user,
-  })
+  // If already attached by middleware
+  if (req.user) {
+    return res.json({
+      success: true,
+      user: req.user,
+    })
+  }
+
+  const token = extractToken(req)
+  if (!token) {
+    return res.json({
+      success: false,
+      user: null,
+      message: 'Unauthenticated',
+    })
+  }
+
+  if (await isTokenRevoked(token)) {
+    return res.json({
+      success: false,
+      user: null,
+      message: 'Session revoked',
+    })
+  }
+
+  try {
+    const decoded = jwt.verify(token, getJwtSecret())
+    await connectDB()
+    const user = await resolveUserById(decoded.id)
+    if (!user) {
+      return res.json({
+        success: false,
+        user: null,
+        message: 'User no longer exists',
+      })
+    }
+
+    return res.json({
+      success: true,
+      user,
+    })
+  } catch (err) {
+    return res.json({
+      success: false,
+      user: null,
+      message: err.message,
+    })
+  }
 })
 
 /**

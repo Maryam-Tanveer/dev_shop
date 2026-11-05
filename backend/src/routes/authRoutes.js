@@ -17,6 +17,6 @@ router.post('/register', authLimiter, validate(registerSchema), register)
 router.post('/signup', authLimiter, validate(registerSchema), register)
 router.post('/google', authLimiter, validate(googleAuthSchema), googleAuth)
 router.post('/logout', logout)
-router.get('/me', requireAuth, getMe)
+router.get('/me', getMe)
 
 export default router
