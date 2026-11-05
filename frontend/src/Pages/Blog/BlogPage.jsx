@@ -8,13 +8,19 @@ import BlogCategoryFilter from '../../Components/Blog/BlogCategoryFilter'
 import BlogGrid from '../../Components/Blog/BlogGrid'
 import BlogNewsletterCard from '../../Components/Blog/BlogNewsletterCard'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
+import { useCart } from '../../context/CartContext'
 
 export default function BlogPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
+  const {
+    items: cartItems,
+    removeFromCart,
+    isDrawerOpen,
+    openDrawer,
+    closeDrawer,
+  } = useCart()
   const [activeFilter, setActiveFilter] = useState('all')
   const [bookmarks, setBookmarks] = useState({ 'post-1': true })
-  const [cart, setCart] = useState([])
-  const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('BLOG')
   const [toast, setToast] = useState(null)
@@ -64,13 +70,13 @@ export default function BlogPage({ onNavigate, onSelectProduct }) {
 
       {/* Cart Drawer */}
       <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cart}
-        onRemoveItem={(id) => setCart((prev) => prev.filter((item, idx) => (item.cartItemId || idx) !== id))}
+        isOpen={isDrawerOpen}
+        onClose={closeDrawer}
+        items={cartItems}
+        onRemoveItem={removeFromCart}
         onCheckout={() => {
           showToast('Proceeding to checkout...')
-          setIsCartOpen(false)
+          closeDrawer()
           if (onNavigate) {
             onNavigate('CHECKOUT')
           } else {
@@ -81,9 +87,7 @@ export default function BlogPage({ onNavigate, onSelectProduct }) {
 
       {/* Navbar */}
       <Navbar
-        cartCount={cart.length}
-        onOpenCart={() => setIsCartOpen(true)}
-        wishlistCount={2}
+        onOpenCart={openDrawer}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav={activeNav}

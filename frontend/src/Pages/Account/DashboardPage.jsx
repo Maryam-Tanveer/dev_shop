@@ -65,9 +65,7 @@ export default function DashboardPage({ onNavigate, onSelectProduct }) {
 
       {/* Navbar */}
       <Navbar
-        cartCount={0}
         onOpenCart={() => setIsDrawerOpen(true)}
-        wishlistCount={4}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav=""
@@ -117,12 +115,7 @@ export default function DashboardPage({ onNavigate, onSelectProduct }) {
             <div className="lg:col-span-8">
               {activeTab === 'orders' && (
                 <RecentDropOrders
-                  onTrackOrder={(order) => setTrackingOrder(order || { orderNumber: 'DS-8492019', status: 'In Transit' })}
-                  onViewInvoice={(order) => showToast(`Invoice downloaded for ${order?.orderNumber || '#DS-8492019'}`)}
-                  onOrderHelp={() => showToast('Connecting to 24/7 VIP drop concierge...')}
-                  onWriteReview={() => showToast('Write review form opened (+50 Vault Pts)')}
-                  onViewCertificate={() => showToast('Vault NFT Authenticity certificate verified.')}
-                  onReorder={() => showToast('Adding items back to your drop cart...')}
+                  onTrackOrder={(order) => setTrackingOrder(order)}
                 />
               )}
 

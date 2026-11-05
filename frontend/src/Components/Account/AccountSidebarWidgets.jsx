@@ -21,7 +21,7 @@ export default function AccountSidebarWidgets({
   const aptLine = defaultAddr?.apartment || 'Loft 3B'
   const cityStateZip = [defaultAddr?.city || 'New York', defaultAddr?.state || 'NY', defaultAddr?.zipCode || defaultAddr?.postalCode || '10013'].filter(Boolean).join(', ')
   const countryLine = defaultAddr?.country || 'United States'
-  const phoneLine = currentUser?.phone || '+1 (212) 840-9124'
+  const phoneLine = currentUser?.phone || null
   const secondaryCount = Math.max(0, (currentUser?.addresses?.length || 1) - 1)
 
   return (
@@ -54,7 +54,7 @@ export default function AccountSidebarWidgets({
           {aptLine && <p>{aptLine}</p>}
           <p>{cityStateZip}</p>
           <p>{countryLine}</p>
-          <p className="pt-1 text-neutral-500 font-medium">{phoneLine}</p>
+          {phoneLine && <p className="pt-1 text-neutral-500 font-medium">{phoneLine}</p>}
         </div>
 
         <div className="flex items-center justify-between text-[11px] pt-3 border-t border-neutral-100 text-neutral-500">
@@ -77,39 +77,13 @@ export default function AccountSidebarWidgets({
               Payment Methods
             </h3>
           </div>
-          <button
-            onClick={onManagePayment}
-            className="text-xs font-bold text-[#c81d25] hover:underline cursor-pointer"
-          >
-            Manage
-          </button>
         </div>
 
-        {/* Black QuickPass Card Mockup */}
-        <div className="bg-[#121212] text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-neutral-800 relative overflow-hidden mb-3">
-          <div className="flex items-center justify-between mb-6">
-            <span className="text-[10px] font-black tracking-widest uppercase text-neutral-400">
-              DEV SHOP QUICKPASS
-            </span>
-            <span className="text-xs font-black italic tracking-wider text-white">
-              VISA
-            </span>
-          </div>
-
-          <div className="text-base sm:text-lg font-mono font-bold tracking-widest text-neutral-100 mb-6">
-            •••• •••• •••• 8821
-          </div>
-
-          <div className="flex items-end justify-between text-[9px] font-bold uppercase tracking-wider text-neutral-400">
-            <div>
-              <span className="block text-[8px] text-neutral-500">CARDHOLDER</span>
-              <span className="text-white">{recipientName.toUpperCase()}</span>
-            </div>
-            <div className="text-right">
-              <span className="block text-[8px] text-neutral-500">EXPIRES</span>
-              <span className="text-white">09/28</span>
-            </div>
-          </div>
+        {/* Saved Cards Placeholder */}
+        <div className="bg-neutral-50 rounded-2xl p-6 text-center border border-dashed border-neutral-200 mb-3">
+          <CreditCard className="w-8 h-8 mx-auto text-neutral-400 mb-2 stroke-[1.5]" />
+          <p className="text-xs font-bold text-neutral-700">Saved Cards</p>
+          <p className="text-[10px] text-neutral-400 mt-0.5">Secure payment profile management (Coming soon)</p>
         </div>
 
         <div className="flex items-center justify-between text-[11px] pt-2 text-neutral-500">
@@ -117,12 +91,7 @@ export default function AccountSidebarWidgets({
             <Lock className="w-3 h-3 text-[#c81d25]" />
             <span>Tokenized 256-Bit SSL</span>
           </span>
-          <button
-            onClick={onAddCard}
-            className="text-[#c81d25] font-bold hover:underline"
-          >
-            + Add Card
-          </button>
+          <span className="text-neutral-400 font-bold">Stripe Encrypted</span>
         </div>
       </div>
 
@@ -221,17 +190,17 @@ export default function AccountSidebarWidgets({
         </div>
 
         <p className="text-xs text-neutral-600 leading-relaxed mb-4">
-          You are 550 points away from unlocking <strong className="text-neutral-900">Apex Collector Status</strong> with guaranteed zero-queue checkout and personal stylist consultation.
+          Vault Loyalty & Rewards tiers are actively in development. Stay tuned for exclusive drop access tiers!
         </p>
 
-        {/* Progress Bar */}
+        {/* Loyalty Tier Status */}
         <div className="mb-4">
           <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-neutral-500 mb-1.5">
-            <span>PROGRESS: 2,450 / 3,000 PTS</span>
-            <span className="text-[#c81d25]">81%</span>
+            <span>LOYALTY TIERS</span>
+            <span className="text-[#c81d25]">Coming Soon</span>
           </div>
           <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-            <div className="h-full bg-[#c81d25] rounded-full w-[81%]" />
+            <div className="h-full bg-neutral-300 rounded-full w-full" />
           </div>
         </div>
 

@@ -23,29 +23,18 @@ export default function OrderHelpConcierge({
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="space-y-2 mb-3 pt-2">
-          <button
-            onClick={onChatClick}
-            className="w-full bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-xl px-4 py-2.5 text-xs font-bold text-neutral-800 flex items-center justify-between transition shadow-2xs group"
+        {/* Contact Links */}
+        <div className="space-y-2 mb-3 pt-2 text-xs">
+          <a
+            href="mailto:support@devshop.io"
+            className="w-full bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-xl px-4 py-2.5 font-bold text-neutral-800 flex items-center justify-between transition shadow-2xs group"
           >
             <span className="flex items-center gap-2">
               <MessageSquare className="w-3.5 h-3.5 text-[#c81d25]" />
-              <span>Launch 24/7 Live Drop Chat</span>
+              <span>Email Concierge (support@devshop.io)</span>
             </span>
             <ArrowRight className="w-3.5 h-3.5 text-neutral-400 group-hover:translate-x-0.5 transition" />
-          </button>
-
-          <button
-            onClick={onHotlineClick}
-            className="w-full bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-xl px-4 py-2.5 text-xs font-bold text-neutral-800 flex items-center justify-between transition shadow-2xs group"
-          >
-            <span className="flex items-center gap-2">
-              <Phone className="w-3.5 h-3.5 text-[#c81d25]" />
-              <span>1-800-DEV-DROP Hotline</span>
-            </span>
-            <ArrowRight className="w-3.5 h-3.5 text-neutral-400 group-hover:translate-x-0.5 transition" />
-          </button>
+          </a>
         </div>
 
         <p className="text-[10px] text-neutral-400 text-center leading-relaxed">

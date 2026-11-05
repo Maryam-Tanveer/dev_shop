@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Flame, Clock, Heart, Star, ShoppingBag, Check, ChevronRight } from 'lucide-react'
+import { Flame, Heart, Star, ShoppingBag, Check, ChevronRight } from 'lucide-react'
 import { api } from '../../services/api'
 
 export default function DealsSection({ onAddToCart, wishlist = {}, onToggleWishlist, onSelectProduct }) {
@@ -8,7 +8,6 @@ export default function DealsSection({ onAddToCart, wishlist = {}, onToggleWishl
   const [deals, setDeals] = useState([])
   const [offset, setOffset] = useState(0)
   const [addedId, setAddedId] = useState(null)
-  const [timeLeft, setTimeLeft] = useState({ hours: 11, minutes: 20, seconds: 6 })
 
   const handleSelect = (productId) => {
     if (onSelectProduct) {
@@ -36,18 +35,6 @@ export default function DealsSection({ onAddToCart, wishlist = {}, onToggleWishl
     }
   }, [])
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 }
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 }
-        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 }
-        return { hours: 12, minutes: 0, seconds: 0 }
-      })
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [])
-
   const handleQuickAdd = (product) => {
     if (onAddToCart) onAddToCart(product)
     setAddedId(product.id)
@@ -73,18 +60,15 @@ export default function DealsSection({ onAddToCart, wishlist = {}, onToggleWishl
             </h2>
           </div>
           <p className="text-xs text-neutral-500 mt-1">
-            Flash allocation ends automatically upon timer expiration. Click any item to explore full drop specs.
+            Curated archive deadstock at special pricing. Click any item to explore full drop specs.
           </p>
         </div>
 
-        {/* Countdown Badge */}
+        {/* Limited Stock Badge */}
         <div className="self-start sm:self-auto">
-          <div className="bg-[#881337] text-white text-xs font-mono font-bold px-4 py-2 rounded-full flex items-center gap-2 shadow-xs">
-            <Clock className="w-3.5 h-3.5 text-rose-300" />
-            <span>
-              ENDS IN : {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-            </span>
-          </div>
+          <span className="bg-rose-50 border border-rose-200 text-[#c81d25] text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full">
+            Limited Stock Vault Deals
+          </span>
         </div>
       </div>
 

@@ -120,12 +120,11 @@ export default function Footer({ onSubscribe }) {
         {/* Bottom Strip */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-neutral-500">
           <div>
-            © 2024 Dev Shop Global Inc. All rights reserved.
+            © {new Date().getFullYear()} Dev Shop Global Inc. All rights reserved.
           </div>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-neutral-300 transition">Privacy Policy</a>
-            <a href="#" className="hover:text-neutral-300 transition">Terms of Service</a>
-            <a href="#" className="hover:text-neutral-300 transition">Security</a>
+            <Link to="/faq" className="hover:text-neutral-300 transition">Privacy & Terms</Link>
+            <Link to="/faq" className="hover:text-neutral-300 transition">Security Verification</Link>
             <Link to="/admin" className="hover:text-neutral-300 transition opacity-60 hover:opacity-100 font-mono text-[10px]">Vault Console 🔒</Link>
           </div>
         </div>

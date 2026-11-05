@@ -7,12 +7,18 @@ import FaqHero from '../../Components/Faq/FaqHero'
 import FaqAccordion from '../../Components/Faq/FaqAccordion'
 import FaqContactBanner from '../../Components/Faq/FaqContactBanner'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
+import { useCart } from '../../context/CartContext'
 
 export default function FaqPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
+  const {
+    items: cartItems,
+    removeFromCart,
+    isDrawerOpen,
+    openDrawer,
+    closeDrawer,
+  } = useCart()
   const [activeCategory, setActiveCategory] = useState('shipping')
-  const [cart, setCart] = useState([])
-  const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('FAQ')
   const [toast, setToast] = useState(null)
@@ -46,13 +52,13 @@ export default function FaqPage({ onNavigate, onSelectProduct }) {
 
       {/* Cart Drawer */}
       <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cart}
-        onRemoveItem={(id) => setCart((prev) => prev.filter((item, idx) => (item.cartItemId || idx) !== id))}
+        isOpen={isDrawerOpen}
+        onClose={closeDrawer}
+        items={cartItems}
+        onRemoveItem={removeFromCart}
         onCheckout={() => {
           showToast('Proceeding to encrypted checkout...')
-          setIsCartOpen(false)
+          closeDrawer()
           if (onNavigate) {
             onNavigate('CHECKOUT')
           } else {
@@ -63,9 +69,7 @@ export default function FaqPage({ onNavigate, onSelectProduct }) {
 
       {/* Navbar */}
       <Navbar
-        cartCount={cart.length}
-        onOpenCart={() => setIsCartOpen(true)}
-        wishlistCount={2}
+        onOpenCart={openDrawer}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav={activeNav}

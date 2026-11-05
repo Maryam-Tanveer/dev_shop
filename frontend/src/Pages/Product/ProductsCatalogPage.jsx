@@ -13,7 +13,6 @@ import { useCart } from '../../context/CartContext'
 import { useWishlist } from '../../context/WishlistContext'
 import { api } from '../../services/api'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
-import { CATALOG_PRODUCTS } from '../../data/catalog'
 
 export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
@@ -36,7 +35,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const [activeNav, setActiveNav] = useState('PRODUCTS')
   const [toast, setToast] = useState(null)
   const [visibleCount, setVisibleCount] = useState(6)
-  const [products, setProducts] = useState(CATALOG_PRODUCTS)
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
 
   // Keep search query in sync with URL ?search= param
@@ -54,28 +53,17 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
       .getProducts({ category: selectedCollection })
       .then((data) => {
         if (isMounted) {
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             setProducts(data)
           } else {
-            // Smart local fallback so catalog is never empty
-            let fallback = [...CATALOG_PRODUCTS]
-            if (selectedCollection && selectedCollection !== 'All') {
-              if (/top\s*best\s*deals/i.test(selectedCollection)) {
-                fallback = fallback.filter((p) => p.originalPrice || (p.badge && /OFF|SALE|DEAL/i.test(p.badge)) || (p.id && p.id.startsWith('deal-')))
-              } else if (/automated\s*collection/i.test(selectedCollection)) {
-                fallback = fallback.filter((p) => /Automated Collection/i.test(p.category) || /snowboard/i.test(p.id))
-              } else if (/hydrogen/i.test(selectedCollection)) {
-                fallback = fallback.filter((p) => /Hydrogen/i.test(p.category) || /asics|special/i.test(p.brand))
-              }
-            }
-            setProducts(fallback.length > 0 ? fallback : CATALOG_PRODUCTS)
+            setProducts([])
           }
         }
       })
       .catch((err) => {
-        console.warn('Failed to load products from API, using catalog items:', err.message)
+        console.warn('Failed to load products from API:', err.message)
         if (isMounted) {
-          setProducts(CATALOG_PRODUCTS)
+          setProducts([])
         }
       })
       .finally(() => {
@@ -89,7 +77,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
 
   // Dynamically filter and sort products based on all active criteria
   const filteredProducts = useMemo(() => {
-    let list = Array.isArray(products) && products.length > 0 ? [...products] : [...CATALOG_PRODUCTS]
+    let list = Array.isArray(products) ? [...products] : []
 
     // 0. Search Query filter (matches title, fullTitle, brand, category, description, id)
     if (searchQuery && searchQuery.trim()) {

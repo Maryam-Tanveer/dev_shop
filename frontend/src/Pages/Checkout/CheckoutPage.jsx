@@ -280,9 +280,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
 
       {/* Navbar */}
       <Navbar
-        cartCount={cartCount}
         onOpenCart={openDrawer}
-        wishlistCount={2}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav={activeNav}

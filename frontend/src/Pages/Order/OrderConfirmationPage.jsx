@@ -93,9 +93,7 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
 
       {/* Navbar */}
       <Navbar
-        cartCount={cartCount}
         onOpenCart={() => setIsDrawerOpen(true)}
-        wishlistCount={4}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav=""
@@ -186,14 +184,9 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
                   onViewAccount={() => (onNavigate ? onNavigate('ACCOUNT') : navigate('/account'))}
                   onContinueShopping={() => (onNavigate ? onNavigate('PRODUCTS') : navigate('/products'))}
                   onPrintInvoice={() => window.print()}
-                  onDownloadPdf={() => showToast('Downloading Official Encrypted Receipt PDF...')}
                 />
 
-                <OrderHelpConcierge
-                  onChatClick={() => showToast('Connecting to 24/7 drop concierge...')}
-                  onHotlineClick={() => showToast('Dialing 1-800-DEV-DROP priority line...')}
-                  onAddSuggested={() => showToast('Added Eastside Archive Hoodie to your VIP hold list!')}
-                />
+                <OrderHelpConcierge />
               </div>
             </div>
           </div>

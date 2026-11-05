@@ -168,8 +168,8 @@ export default function AccountProfileHero({
             <Award className="w-5 h-5 stroke-[2]" />
           </div>
           <div>
-            <div className="text-lg sm:text-xl font-black text-[#c81d25] leading-none">
-              2,450 <span className="text-xs font-bold text-neutral-500">PTS</span>
+            <div className="text-sm font-bold text-neutral-500 leading-none">
+              Coming Soon
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
               Dev Points Balance

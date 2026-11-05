@@ -134,22 +134,14 @@ export default function OrderSummarySidebar({
           </button>
         </div>
 
-        {/* Print & PDF links */}
-        <div className="flex items-center justify-center gap-4 text-xs font-bold text-neutral-500 pt-2 border-t border-neutral-100">
+        {/* Print Invoice link */}
+        <div className="flex items-center justify-center text-xs font-bold text-neutral-500 pt-2 border-t border-neutral-100">
           <button
             onClick={onPrintInvoice}
             className="flex items-center gap-1.5 hover:text-neutral-900 transition"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Invoice</span>
-          </button>
-          <span className="text-neutral-300">|</span>
-          <button
-            onClick={onDownloadPdf}
-            className="flex items-center gap-1.5 hover:text-neutral-900 transition"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>PDF Receipt</span>
           </button>
         </div>
       </div>

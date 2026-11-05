@@ -1,23 +1,12 @@
 import { useEffect, useState } from 'react'
 import {
   ShieldCheck,
-  FileText,
-  Headphones,
-  RotateCcw,
-  PenTool,
-  Award,
-  ArrowRight,
   ChevronDown,
 } from 'lucide-react'
 import { api } from '../../services/api'
 
 export default function RecentDropOrders({
   onTrackOrder,
-  onViewInvoice,
-  onOrderHelp,
-  onWriteReview,
-  onViewCertificate,
-  onReorder,
 }) {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -222,61 +211,16 @@ export default function RecentDropOrders({
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-5 border-t border-neutral-100">
-              {isInVault ? (
-                <>
-                  <div className="flex items-center gap-4 text-xs font-bold text-neutral-500">
-                    <button
-                      onClick={onViewInvoice}
-                      className="flex items-center gap-1.5 hover:text-neutral-900 transition"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>View Invoice</span>
-                    </button>
-                    <span className="text-neutral-300">|</span>
-                    <button
-                      onClick={onOrderHelp}
-                      className="flex items-center gap-1.5 hover:text-neutral-900 transition"
-                    >
-                      <Headphones className="w-3.5 h-3.5" />
-                      <span>Order Help</span>
-                    </button>
-                  </div>
+              <span className="text-xs text-neutral-400 font-medium">
+                Vault Certified • Tamper-Evident Packaging
+              </span>
 
-                  <button
-                    onClick={() => onTrackOrder && onTrackOrder(order)}
-                    className="bg-[#c81d25] hover:bg-[#a8161d] text-white text-xs font-bold px-6 py-2.5 rounded-full transition shadow-md active:scale-95"
-                  >
-                    Track Shipment
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-4 text-xs font-bold text-neutral-500">
-                    <button
-                      onClick={onWriteReview}
-                      className="flex items-center gap-1.5 hover:text-neutral-900 transition text-[#c81d25]"
-                    >
-                      <PenTool className="w-3.5 h-3.5" />
-                      <span>Write Review (+50 Pts)</span>
-                    </button>
-                    <span className="text-neutral-300">|</span>
-                    <button
-                      onClick={onViewCertificate}
-                      className="flex items-center gap-1.5 hover:text-neutral-900 transition"
-                    >
-                      <Award className="w-3.5 h-3.5" />
-                      <span>Certificate of Authenticity</span>
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={onReorder}
-                    className="bg-[#121212] hover:bg-neutral-800 text-white text-xs font-bold px-6 py-2.5 rounded-full transition shadow-md active:scale-95"
-                  >
-                    Reorder Silhouette
-                  </button>
-                </>
-              )}
+              <button
+                onClick={() => onTrackOrder && onTrackOrder(order)}
+                className="bg-[#c81d25] hover:bg-[#a8161d] text-white text-xs font-bold px-6 py-2.5 rounded-full transition shadow-md active:scale-95"
+              >
+                Track Shipment
+              </button>
             </div>
           </div>
         )
