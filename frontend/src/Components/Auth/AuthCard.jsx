@@ -243,9 +243,20 @@ export default function AuthCard({
 
       {/* Alert Error Banner */}
       {errorMessage && (
-        <div role="alert" aria-live="assertive" className="bg-rose-50 border border-rose-200 text-[#c81d25] px-4 py-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 mb-4 animate-shake">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#c81d25]" aria-hidden="true" />
-          <span className="flex-1 leading-snug">{errorMessage}</span>
+        <div role="alert" aria-live="assertive" className="bg-rose-50 border border-rose-200 text-[#c81d25] px-4 py-3 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 mb-4 animate-shake">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#c81d25]" aria-hidden="true" />
+            <span className="flex-1 leading-snug">{errorMessage}</span>
+          </div>
+          {activeTab === 'signin' && (
+            <button
+              type="button"
+              onClick={() => handleTabSwitch('create')}
+              className="text-left text-xs font-bold underline text-[#c81d25] hover:text-[#901318] cursor-pointer ml-6"
+            >
+              Naya account banana hai? Switch to Create Account →
+            </button>
+          )}
         </div>
       )}
 

@@ -95,7 +95,7 @@ export const login = asyncHandler(async (req, res, next) => {
       const isMatch = await user.matchPassword(password)
 
       if (!isMatch) {
-        return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
+        return next(new AppError('Incorrect password. Please verify your password and try again.', 401))
       }
       const token = generateToken(user)
       const safeUser = {
@@ -173,7 +173,12 @@ export const login = asyncHandler(async (req, res, next) => {
     }
   }
 
-  return next(new AppError(INVALID_CREDENTIALS_MSG, 401))
+  return next(
+    new AppError(
+      'No account found with this email. Please switch to "Create Account" tab above to register.',
+      401
+    )
+  )
 })
 
 /**
