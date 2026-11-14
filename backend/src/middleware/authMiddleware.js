@@ -19,7 +19,7 @@ export const getJwtSecret = () => {
   return secret || 'devshop_local_development_jwt_vault_secret_only_for_testing'
 }
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d'
 
 /**
  * Generate standard signed JWT token for user

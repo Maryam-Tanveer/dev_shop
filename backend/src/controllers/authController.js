@@ -20,11 +20,24 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || GOOGLE_CLI
 export const getCookieOptions = (req) => {
   const isHttps = req ? Boolean(req.secure || req.headers['x-forwarded-proto'] === 'https') : false
   const isProduction = process.env.NODE_ENV === 'production' && isHttps
+
+  // Calculate cookie maxAge dynamically from JWT_EXPIRES_IN (default: 30 days)
+  const rawExpire = process.env.JWT_EXPIRES_IN || '30d'
+  const match = String(rawExpire).match(/^(\d+)([dhm])?$/)
+  let maxAge = 30 * 24 * 60 * 60 * 1000
+  if (match) {
+    const num = parseInt(match[1], 10)
+    const unit = match[2]
+    if (unit === 'd') maxAge = num * 24 * 60 * 60 * 1000
+    else if (unit === 'h') maxAge = num * 60 * 60 * 1000
+    else if (unit === 'm') maxAge = num * 60 * 1000
+  }
+
   return {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge,
   }
 }
 

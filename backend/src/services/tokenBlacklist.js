@@ -11,7 +11,7 @@ const memoryBlacklist = new Set()
 export const revokeToken = async (token) => {
   if (!token) return
 
-  let expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  let expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   try {
     const decoded = jwt.decode(token)
     if (decoded?.exp) {
