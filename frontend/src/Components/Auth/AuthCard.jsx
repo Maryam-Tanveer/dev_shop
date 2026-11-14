@@ -201,13 +201,13 @@ export default function AuthCard({
 
         {/* Dynamic Heading based on Active Tab */}
         <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight">
-          {activeTab === 'create' ? 'Join The Vault' : 'Welcome Back'}
+          {activeTab === 'create' ? 'Create Your Account' : 'Welcome Back'}
         </h1>
 
         <p className="text-xs text-neutral-500 mt-2 max-w-xs leading-relaxed">
           {activeTab === 'create'
-            ? 'Create an account to gain priority drop notifications, track orders, and join the community.'
-            : 'Sign in to access your exclusive sneaker drop alerts, verified vault orders, and curated wishlist.'}
+            ? 'Create an account to track your orders, save items to wishlist, and get exclusive member perks.'
+            : 'Sign in to access your orders, track shipments, and manage your curated wishlist.'}
         </p>
       </div>
 

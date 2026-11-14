@@ -47,7 +47,7 @@ export default function LoginPage({ onNavigate, onSelectProduct }) {
   }
 
   const handleSignUpSuccess = (userData) => {
-    showToast(`Welcome to the Vault, ${userData.name}! Account created successfully.`)
+    showToast(`Welcome, ${userData.name}! Account created successfully.`)
     setTimeout(() => {
       if (onNavigate) {
         onNavigate('ACCOUNT')
