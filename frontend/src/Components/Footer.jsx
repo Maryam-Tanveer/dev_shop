@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Sparkles, Share2 } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { FOOTER_COLLECTIONS_LINKS, FOOTER_SUPPORT_LINKS } from '../data/navigation'
 import { api } from '../services/api'
 
@@ -8,18 +8,36 @@ const CURRENT_YEAR = new Date().getFullYear()
 
 export default function Footer({ onSubscribe }) {
   const [email, setEmail] = useState('')
-  const [subscribed, setSubscribed] = useState(false)
+  const [status, setStatus] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
+  const [message, setMessage] = useState('')
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!email) return
-    setSubscribed(true)
-    api.subscribeDropAlert(email, 'Weekly Curated Vault Streetwear Drop').catch(() => {})
-    if (onSubscribe) onSubscribe(email)
-    setTimeout(() => {
+    const trimmed = email.trim()
+    if (!trimmed) return
+
+    setStatus('loading')
+    setMessage('')
+
+    try {
+      const res = await api.subscribeNewsletter(trimmed, 'footer_newsletter')
+      setStatus('success')
+      setMessage(res.message || 'Thanks for subscribing! You are on the list.')
+      if (onSubscribe) onSubscribe(trimmed)
       setEmail('')
-      setSubscribed(false)
-    }, 2500)
+
+      setTimeout(() => {
+        setStatus('idle')
+        setMessage('')
+      }, 4000)
+    } catch (err) {
+      setStatus('error')
+      setMessage(err.message || 'Could not subscribe right now. Please try again.')
+      setTimeout(() => {
+        setStatus('idle')
+        setMessage('')
+      }, 4000)
+    }
   }
 
   return (
@@ -41,22 +59,6 @@ export default function Footer({ onSubscribe }) {
             <p className="text-neutral-400 text-xs leading-relaxed max-w-sm">
               Curating authentic high-energy sneaker drops, premium streetwear silhouettes, and cultural editorial stories.
             </p>
-
-            {/* Social icons */}
-            <div className="flex items-center gap-3 pt-2 text-neutral-400">
-              <button
-                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 hover:text-white flex items-center justify-center border border-neutral-800 transition"
-                title="Spark Feed"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-              </button>
-              <button
-                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 hover:text-white flex items-center justify-center border border-neutral-800 transition"
-                title="Share"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
 
           {/* Col 2: Shop Collections (3 cols) */}
@@ -65,13 +67,17 @@ export default function Footer({ onSubscribe }) {
               SHOP COLLECTIONS
             </h4>
             <ul className="space-y-2.5 text-neutral-400 font-medium">
-              {FOOTER_COLLECTIONS_LINKS.map((link) => (
-                <li key={link}>
-                  <Link to="/collections" className="hover:text-white transition block">
-                    {link}
-                  </Link>
-                </li>
-              ))}
+              {FOOTER_COLLECTIONS_LINKS.map((link, idx) => {
+                const label = typeof link === 'object' ? link.label : link
+                const path = typeof link === 'object' ? link.path : '/collections'
+                return (
+                  <li key={idx}>
+                    <Link to={path} className="hover:text-white transition block">
+                      {label}
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </div>
 
@@ -81,13 +87,17 @@ export default function Footer({ onSubscribe }) {
               CUSTOMER SUPPORT
             </h4>
             <ul className="space-y-2.5 text-neutral-400 font-medium">
-              {FOOTER_SUPPORT_LINKS.map((link) => (
-                <li key={link}>
-                  <Link to="/faq" className="hover:text-white transition block">
-                    {link}
-                  </Link>
-                </li>
-              ))}
+              {FOOTER_SUPPORT_LINKS.map((link, idx) => {
+                const label = typeof link === 'object' ? link.label : link
+                const path = typeof link === 'object' ? link.path : '/faq'
+                return (
+                  <li key={idx}>
+                    <Link to={path} className="hover:text-white transition block">
+                      {label}
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </div>
 
@@ -97,7 +107,7 @@ export default function Footer({ onSubscribe }) {
               NEWSLETTER
             </h4>
             <p className="text-neutral-400 text-xs mb-3 leading-relaxed">
-              Get first-access notifications on hyped sneaker drops and editorial stories.
+              Get first-access notifications on new arrivals, exclusive releases, and store updates.
             </p>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
@@ -107,15 +117,45 @@ export default function Footer({ onSubscribe }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                className="bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#c81d25] transition"
+                disabled={status === 'loading'}
+                className="bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#c81d25] transition disabled:opacity-50"
               />
               <button
                 type="submit"
-                className="bg-[#c81d25] hover:bg-[#a8161d] text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-lg transition active:scale-95"
+                disabled={status === 'loading'}
+                className="bg-[#c81d25] hover:bg-[#a8161d] text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-lg transition active:scale-95 disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
               >
-                {subscribed ? 'Subscribed!' : 'Subscribe'}
+                {status === 'loading' ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Subscribing...</span>
+                  </>
+                ) : status === 'success' ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Subscribed!</span>
+                  </>
+                ) : (
+                  <span>Subscribe</span>
+                )}
               </button>
             </form>
+
+            {/* Dynamic Status Feedback */}
+            {message && (
+              <div
+                className={`mt-2.5 text-[11px] font-medium flex items-start gap-1.5 ${
+                  status === 'error' ? 'text-rose-400' : 'text-emerald-400'
+                }`}
+              >
+                {status === 'error' ? (
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                )}
+                <span>{message}</span>
+              </div>
+            )}
           </div>
         </div>
 

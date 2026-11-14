@@ -19,7 +19,7 @@ export default function WishlistHeader({
           Home
         </Link>
         <span className="mx-1.5">/</span>
-        <span className="text-neutral-600 font-semibold">Shop Experience</span>
+        <span className="text-neutral-900 font-bold">Wishlist</span>
       </div>
 
       {/* Main Title & Action Row */}

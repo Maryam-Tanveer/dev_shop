@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal } from 'lucide-react'
 import Navbar from '../../Components/Navbar'
@@ -18,7 +18,8 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { wishlistMap, toggleWishlist, wishlistCount } = useWishlist()
-  const [selectedCollection, setSelectedCollection] = useState('All')
+  const initialCategory = searchParams.get('category') || searchParams.get('collection') || 'All'
+  const [selectedCollection, setSelectedCollection] = useState(initialCategory)
   const [selectedSizes, setSelectedSizes] = useState([])
   const [priceRange, setPriceRange] = useState([0, 1000])
   const [selectedBrands, setSelectedBrands] = useState([])
@@ -38,106 +39,62 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
 
-  // Keep search query in sync with URL ?search= param
+  // Keep collection and search query in sync with URL params
   useEffect(() => {
+    const urlCat = searchParams.get('category') || searchParams.get('collection') || 'All'
+    if (urlCat !== selectedCollection) {
+      setSelectedCollection(urlCat)
+    }
+
     const urlSearch = searchParams.get('search')
     if (urlSearch !== null && urlSearch !== searchQuery) {
       setSearchQuery(urlSearch)
     }
   }, [searchParams])
 
+  // Fetch products directly from backend with all dynamic filters applied
   useEffect(() => {
     let isMounted = true
     setLoading(true)
-    api
-      .getProducts({ category: selectedCollection })
-      .then((data) => {
-        if (isMounted) {
-          if (Array.isArray(data)) {
-            setProducts(data)
-          } else {
+
+    const timer = setTimeout(() => {
+      const params = {
+        category: selectedCollection,
+        brands: selectedBrands,
+        minPrice: priceRange?.[0] > 0 ? priceRange[0] : undefined,
+        maxPrice: priceRange?.[1] < 1000 ? priceRange[1] : undefined,
+        sizes: selectedSizes,
+        sort: sortBy,
+        q: searchQuery,
+      }
+
+      api
+        .getProducts(params)
+        .then((data) => {
+          if (isMounted) {
+            setProducts(Array.isArray(data) ? data : [])
+            setVisibleCount(6)
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load products from API:', err.message)
+          if (isMounted) {
             setProducts([])
           }
-        }
-      })
-      .catch((err) => {
-        console.warn('Failed to load products from API:', err.message)
-        if (isMounted) {
-          setProducts([])
-        }
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false)
-      })
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false)
+        })
+    }, 150)
 
     return () => {
       isMounted = false
+      clearTimeout(timer)
     }
-  }, [selectedCollection])
+  }, [selectedCollection, selectedSizes, priceRange, selectedBrands, sortBy, searchQuery])
 
-  // Dynamically filter and sort products based on all active criteria
-  const filteredProducts = useMemo(() => {
-    let list = Array.isArray(products) ? [...products] : []
-
-    // 0. Search Query filter (matches title, fullTitle, brand, category, description, id)
-    if (searchQuery && searchQuery.trim()) {
-      const qTokens = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean)
-      list = list.filter((p) => {
-        const text = `${p.title || ''} ${p.fullTitle || ''} ${p.brand || ''} ${p.category || ''} ${p.description || ''} ${p.id || ''}`.toLowerCase()
-        return qTokens.every((token) => text.includes(token))
-      })
-    }
-
-    // 1. Price Range filter (allow open-ended max for grails when max >= 1000)
-    if (Array.isArray(priceRange) && priceRange.length === 2) {
-      const [min, max] = priceRange
-      const effectiveMin = Number(min) || 0
-      const effectiveMax = Number(max) >= 1000 ? Infinity : Number(max)
-      list = list.filter((p) => {
-        const price = Number(p.price) || 0
-        return price >= effectiveMin && price <= effectiveMax
-      })
-    }
-
-    // 2. Brand filter
-    if (selectedBrands && selectedBrands.length > 0) {
-      list = list.filter((p) => {
-        const brandStr = (p.brand || '').toLowerCase()
-        const titleStr = (p.title || '').toLowerCase()
-        const fullTitleStr = (p.fullTitle || '').toLowerCase()
-        return selectedBrands.some((b) => {
-          const bLower = b.toLowerCase()
-          return (
-            brandStr.includes(bLower) ||
-            titleStr.includes(bLower) ||
-            fullTitleStr.includes(bLower)
-          )
-        })
-      })
-    }
-
-    // 3. Size filter
-    if (selectedSizes && selectedSizes.length > 0) {
-      list = list.filter((p) => {
-        if (!p.sizes || p.sizes.length === 0) return true
-        const pSizes = p.sizes.map((s) => String(s).trim())
-        return selectedSizes.some((s) => pSizes.includes(String(s).trim()))
-      })
-    }
-
-    // 4. Sort By
-    if (sortBy === 'Price: Low to High') {
-      list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
-    } else if (sortBy === 'Price: High to Low') {
-      list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
-    } else if (sortBy === 'Newest Drops') {
-      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-    } else if (sortBy === 'Most Hyped') {
-      list.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0))
-    }
-
-    return list
-  }, [products, searchQuery, priceRange, selectedBrands, selectedSizes, sortBy])
+  // Products are fully filtered, sorted, and delivered by backend
+  const filteredProducts = products
 
   const showToast = (message) => {
     setToast(message)
@@ -167,6 +124,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
     setSelectedSizes([])
     setPriceRange([0, 1000])
     setSelectedBrands([])
+    setSortBy('Featured')
     setSearchQuery('')
     setSearchParams({})
     showToast('Filters cleared')
@@ -232,6 +190,7 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
         {/* Catalog Header */}
         <CatalogHeader
           itemCount={filteredProducts.length}
+          collectionName={selectedCollection !== 'All' ? selectedCollection : null}
           onBackToHome={() => onNavigate && onNavigate('HOME')}
         />
 
@@ -242,7 +201,19 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
             <div className="lg:col-span-3">
               <CatalogSidebarFilters
                 selectedCollection={selectedCollection}
-                onSelectCollection={setSelectedCollection}
+                onSelectCollection={(col) => {
+                  setSelectedCollection(col)
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev)
+                    if (col && col !== 'All') {
+                      next.set('category', col)
+                    } else {
+                      next.delete('category')
+                      next.delete('collection')
+                    }
+                    return next
+                  })
+                }}
                 selectedSizes={selectedSizes}
                 onToggleSize={handleToggleSize}
                 priceRange={priceRange}
@@ -257,7 +228,15 @@ export default function ProductsCatalogPage({ onNavigate, onSelectProduct }) {
             <div className="lg:col-span-9">
               <CatalogActiveFilters
                 collection={selectedCollection}
-                onRemoveCollection={() => setSelectedCollection('All')}
+                onRemoveCollection={() => {
+                  setSelectedCollection('All')
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev)
+                    next.delete('category')
+                    next.delete('collection')
+                    return next
+                  })
+                }}
                 sizes={selectedSizes}
                 onRemoveSizes={() => setSelectedSizes([])}
                 brands={selectedBrands}

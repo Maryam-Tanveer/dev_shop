@@ -16,6 +16,14 @@ const blogSchema = new mongoose.Schema(
       type: String,
       default: 'Dev Vault Lab',
     },
+    authorRole: {
+      type: String,
+      default: 'Editorial Staff',
+    },
+    authorImage: {
+      type: String,
+      default: '',
+    },
     date: {
       type: String,
       default: '',

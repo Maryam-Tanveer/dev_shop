@@ -19,6 +19,7 @@ import cartRoutes from './routes/cartRoutes.js'
 import wishlistRoutes from './routes/wishlistRoutes.js'
 import userRoutes from './routes/userRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
+import newsletterRoutes from './routes/newsletterRoutes.js'
 import cookieParser from 'cookie-parser'
 
 dotenv.config()
@@ -153,6 +154,7 @@ app.use('/api/orders', orderRoutes)
 app.use('/api/payments', paymentRoutes)
 app.use('/api/wishlist', wishlistRoutes)
 app.use('/api/user', userRoutes)
+app.use('/api/newsletter', newsletterRoutes)
 
 // 404 Handler for undefined routes
 app.all('*', (req, res, next) => {

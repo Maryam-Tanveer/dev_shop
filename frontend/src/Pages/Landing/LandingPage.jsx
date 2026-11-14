@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../../Components/Navbar'
 import Footer from '../../Components/Footer'
 import CartDrawer from '../../Components/CartDrawer'
-import DropTicker from '../../Components/Landing/DropTicker'
 import HeroSection from '../../Components/Landing/HeroSection'
 import DealsSection from '../../Components/Landing/DealsSection'
 import CollectionsSection from '../../Components/Landing/CollectionsSection'
@@ -106,11 +105,8 @@ export default function LandingPage({ onNavigate, onSelectProduct }) {
         onSelectProduct={onSelectProduct}
       />
 
-      <main className="flex-1 flex flex-col">
-        {/* 3: Breadcrumb & Drop Vault Ticker */}
-        <DropTicker />
-
-        {/* 4: Hero Section (Air Jordan 6 GX Eastside + Sneakers Fest Pass) */}
+      <main className="flex-1 flex flex-col pt-3">
+        {/* Hero Section (Air Jordan 6 GX Eastside + Sneakers Fest Pass) */}
         <HeroSection
           onAddToCart={handleAddToCart}
           onSelectProduct={onSelectProduct}
@@ -152,7 +148,9 @@ export default function LandingPage({ onNavigate, onSelectProduct }) {
 
         {/* 7: Latest from the Blog (3 Cultural Editorial Stories) */}
         <BlogSection
-          onReadPost={(post) => showToast(`Opening article: ${post.title}`)}
+          onReadPost={(post) => {
+            if (post?.id) navigate(`/blog/${post.id}`)
+          }}
         />
 
         {/* 8: Trust / Value Propositions (Free Shipping, Returns, Security, Support) */}

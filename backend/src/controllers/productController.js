@@ -11,13 +11,15 @@ import Product from '../models/Product.js'
 const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
- * Get all products (Lightweight shape) with optional filtering by category, brand, or search query.
- * MongoDB with seamless master database fallback.
+ * Get all products (Lightweight shape) with backend filtering:
+ * Supports category/collection, brand, brands, minPrice, maxPrice, size, sizes, sort, and search query (q).
+ * Queries MongoDB with seamless master database fallback.
  */
 export const getProducts = asyncHandler(async (req, res) => {
-  const { category, brand, q } = req.query
+  const { category, brand, brands, minPrice, maxPrice, size, sizes, sort, q } = req.query
   const filter = {}
 
+  // 1. Category / Collection filter
   if (category && category !== 'All') {
     if (/home\s*page/i.test(category)) {
       // Home page shows all primary vault drops
@@ -29,7 +31,7 @@ export const getProducts = asyncHandler(async (req, res) => {
       ]
     } else if (/automated\s*collection/i.test(category)) {
       filter.$or = [
-        { category: /Automated Collection/i },
+        { category: /Automated Collection|Vault Editions/i },
         { brand: /EXCLUSIVE WINTER|NIKE LAB/i },
         { id: /snowboard/i },
       ]
@@ -38,23 +40,97 @@ export const getProducts = asyncHandler(async (req, res) => {
         { category: /Hydrogen/i },
         { brand: /ASICS|SPECIAL EDITION/i },
       ]
+    } else if (/^bag/i.test(category) || /pack/i.test(category)) {
+      filter.$or = [
+        { category: /Bags|Packs/i },
+        { title: /pack|vest|bag|duffle/i },
+      ]
+    } else if (/dress|clothing|apparel|hoodie|streetwear/i.test(category)) {
+      filter.category = /Streetwear|Apparel/i
+    } else if (/^shoe|^sneaker|^footwear/i.test(category)) {
+      filter.category = /Basketball|Running|Lifestyle|Skate|Trail Tech|Collabs/i
+    } else if (/retro\s*basketball|basketball/i.test(category)) {
+      filter.category = /Basketball|Skate\s*\/\s*Court/i
+    } else if (/running|lifestyle|y2k|runner/i.test(category)) {
+      filter.category = /Running|Lifestyle|Trail Tech/i
+    } else if (/collab/i.test(category)) {
+      filter.category = /Collabs/i
+    } else if (/outerwear|technical/i.test(category)) {
+      filter.category = /Outerwear/i
+    } else if (/limited|care|accessories/i.test(category)) {
+      filter.category = /Accessories|Vault Editions/i
+    } else if (/new\s*arrival/i.test(category)) {
+      filter.$or = [
+        { badge: /HOT|NEW|GRAIL|RELEASE/i },
+        { isNew: true },
+      ]
     } else {
-      filter.category = new RegExp(escapeRegex(category), 'i')
+      filter.$or = [
+        { category: new RegExp(escapeRegex(category), 'i') },
+        { title: new RegExp(escapeRegex(category), 'i') },
+        { fullTitle: new RegExp(escapeRegex(category), 'i') },
+        { brand: new RegExp(escapeRegex(category), 'i') },
+      ]
     }
   }
 
-  if (brand && brand !== 'All') {
-    filter.brand = new RegExp(escapeRegex(brand), 'i')
+  // 2. Brand / Brands filter
+  const brandList = []
+  if (brands && typeof brands === 'string') {
+    brandList.push(...brands.split(',').map((b) => b.trim()).filter(Boolean))
+  }
+  if (brand && brand !== 'All' && !brandList.includes(brand)) {
+    brandList.push(brand)
+  }
+  if (brandList.length > 0) {
+    const brandRegexes = brandList.map((b) => new RegExp(escapeRegex(b), 'i'))
+    filter.brand = { $in: brandRegexes }
   }
 
+  // 3. Price Range filter (minPrice, maxPrice)
+  const numMin = Number(minPrice)
+  const numMax = Number(maxPrice)
+  const hasMin = !isNaN(numMin) && numMin > 0
+  const hasMax = !isNaN(numMax) && numMax > 0 && numMax < 1000
+
+  if (hasMin || hasMax) {
+    filter.price = {}
+    if (hasMin) filter.price.$gte = numMin
+    if (hasMax) filter.price.$lte = numMax
+  }
+
+  // 4. Size / Sizes filter
+  const sizeList = []
+  if (sizes && typeof sizes === 'string') {
+    sizeList.push(...sizes.split(',').map((s) => s.trim()).filter(Boolean))
+  }
+  if (size && !sizeList.includes(size)) {
+    sizeList.push(size)
+  }
+  if (sizeList.length > 0) {
+    const sizeConditions = [
+      { sizes: { $in: sizeList } },
+      { size: { $in: sizeList } },
+      { 'specs.size': { $in: sizeList } },
+    ]
+    if (filter.$or) {
+      filter.$and = filter.$and || []
+      filter.$and.push({ $or: sizeConditions })
+    } else {
+      filter.$or = sizeConditions
+    }
+  }
+
+  // 5. Search query (q)
   if (q && q.trim()) {
     const raw = q.trim()
     const tokens = raw.split(/\s+/).filter(Boolean)
     if (tokens.length > 0) {
-      filter.$and = tokens.map((token) => {
+      filter.$and = filter.$and || []
+      tokens.forEach((token) => {
         const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         const regex = new RegExp(escaped, 'i')
-        return {
+        filter.$and.push({
           $or: [
             { title: regex },
             { fullTitle: regex },
@@ -63,22 +139,145 @@ export const getProducts = asyncHandler(async (req, res) => {
             { description: regex },
             { id: regex },
           ],
-        }
+        })
       })
     }
   }
 
-  let dbProducts = []
+  // 6. Sort option
+  let sortOption = { isFeatured: -1, createdAt: -1 }
+  if (sort === 'price-low' || sort === 'Price: Low to High') {
+    sortOption = { price: 1 }
+  } else if (sort === 'price-high' || sort === 'Price: High to Low') {
+    sortOption = { price: -1 }
+  } else if (sort === 'rating' || sort === 'Highest Rated' || sort === 'Most Hyped') {
+    sortOption = { rating: -1 }
+  } else if (sort === 'newest' || sort === 'Newest Releases' || sort === 'Newest Drops') {
+    sortOption = { createdAt: -1 }
+  }
+
+  let dbProducts = null
   try {
-    dbProducts = await Product.find(filter).lean()
+    const totalCount = await Product.countDocuments().catch(() => 0)
+    if (totalCount > 0) {
+      dbProducts = await Product.find(filter).sort(sortOption).lean()
+    }
   } catch (err) {
     console.warn(`[getProducts] DB find failed: ${err.message}`)
   }
 
+  // Master fallback if DB is not connected or empty
+  let results = dbProducts
+  if (!results) {
+    let masterList = Array.isArray(PRODUCTS_DATABASE) ? [...PRODUCTS_DATABASE] : []
+
+    // Filter in-memory masterList with exact criteria
+    if (category && category !== 'All') {
+      if (/top\s*best\s*deals/i.test(category)) {
+        masterList = masterList.filter(
+          (p) => p.originalPrice > 0 || /OFF|SALE|DEAL/i.test(p.badge) || /^deal-/i.test(p.id)
+        )
+      } else if (/automated\s*collection/i.test(category)) {
+        masterList = masterList.filter(
+          (p) =>
+            /Automated Collection|Vault Editions/i.test(p.category) ||
+            /EXCLUSIVE WINTER|NIKE LAB/i.test(p.brand) ||
+            /snowboard/i.test(p.id)
+        )
+      } else if (/hydrogen/i.test(category)) {
+        masterList = masterList.filter(
+          (p) => /Hydrogen/i.test(p.category) || /ASICS|SPECIAL EDITION/i.test(p.brand)
+        )
+      } else if (/^bag/i.test(category) || /pack/i.test(category)) {
+        masterList = masterList.filter(
+          (p) =>
+            /Bags|Packs/i.test(p.category) ||
+            /pack|vest|bag|duffle/i.test(p.title)
+        )
+      } else if (/dress|clothing|apparel|hoodie|streetwear/i.test(category)) {
+        masterList = masterList.filter((p) => /Streetwear|Apparel/i.test(p.category))
+      } else if (/^shoe|^sneaker|^footwear/i.test(category)) {
+        masterList = masterList.filter((p) =>
+          /Basketball|Running|Lifestyle|Skate|Trail Tech|Collabs/i.test(p.category)
+        )
+      } else if (/retro\s*basketball|basketball/i.test(category)) {
+        masterList = masterList.filter((p) => /Basketball|Skate\s*\/\s*Court/i.test(p.category))
+      } else if (/running|lifestyle|y2k|runner/i.test(category)) {
+        masterList = masterList.filter((p) => /Running|Lifestyle|Trail Tech/i.test(p.category))
+      } else if (/collab/i.test(category)) {
+        masterList = masterList.filter((p) => /Collabs/i.test(p.category))
+      } else if (/outerwear|technical/i.test(category)) {
+        masterList = masterList.filter((p) => /Outerwear/i.test(p.category))
+      } else if (/limited|care|accessories/i.test(category)) {
+        masterList = masterList.filter((p) => /Accessories|Vault Editions/i.test(p.category))
+      } else if (/new\s*arrival/i.test(category)) {
+        masterList = masterList.filter((p) => /HOT|NEW|GRAIL|RELEASE/i.test(p.badge) || p.isNew)
+      } else if (!/home\s*page/i.test(category)) {
+        const catReg = new RegExp(escapeRegex(category), 'i')
+        masterList = masterList.filter(
+          (p) =>
+            catReg.test(p.category) ||
+            catReg.test(p.title) ||
+            catReg.test(p.fullTitle) ||
+            catReg.test(p.brand)
+        )
+      }
+    }
+
+    if (brandList.length > 0) {
+      masterList = masterList.filter((p) =>
+        brandList.some((b) =>
+          new RegExp(escapeRegex(b), 'i').test(p.brand || p.title || p.fullTitle)
+        )
+      )
+    }
+
+    if (hasMin || hasMax) {
+      masterList = masterList.filter((p) => {
+        const price = Number(p.price) || 0
+        if (hasMin && price < numMin) return false
+        if (hasMax && price > numMax) return false
+        return true
+      })
+    }
+
+    if (sizeList.length > 0) {
+      masterList = masterList.filter((p) => {
+        const pSizes = Array.isArray(p.sizes)
+          ? p.sizes.map(String)
+          : p.size
+          ? [String(p.size)]
+          : []
+        return sizeList.some((s) => pSizes.includes(String(s)))
+      })
+    }
+
+    if (q && q.trim()) {
+      const qTokens = q.trim().toLowerCase().split(/\s+/).filter(Boolean)
+      masterList = masterList.filter((p) => {
+        const text = `${p.title || ''} ${p.fullTitle || ''} ${p.brand || ''} ${p.category || ''} ${p.description || ''} ${p.id || ''}`.toLowerCase()
+        return qTokens.every((t) => text.includes(t))
+      })
+    }
+
+    // Sort in-memory
+    if (sort === 'price-low' || sort === 'Price: Low to High') {
+      masterList.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
+    } else if (sort === 'price-high' || sort === 'Price: High to Low') {
+      masterList.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
+    } else if (sort === 'rating' || sort === 'Highest Rated' || sort === 'Most Hyped') {
+      masterList.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0))
+    } else if (sort === 'newest' || sort === 'Newest Releases' || sort === 'Newest Drops') {
+      masterList.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    }
+
+    results = masterList
+  }
+
   res.json({
     success: true,
-    count: dbProducts.length,
-    data: dbProducts.map(toLightProduct),
+    count: results.length,
+    data: results.map(toLightProduct),
   })
 })
 

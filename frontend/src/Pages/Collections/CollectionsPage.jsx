@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Navbar from '../../Components/Navbar'
 import Footer from '../../Components/Footer'
 import CartDrawer from '../../Components/CartDrawer'
@@ -11,9 +11,47 @@ import { api } from '../../services/api'
 import { useCart } from '../../context/CartContext'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 
+const CATEGORY_MAP = {
+  'shoes': 'Shoes',
+  'clothing': 'Dress & Clothing',
+  'bags': 'Bags',
+  'outerwear': 'Outerwear',
+  'accessories': 'Accessories',
+  'collabs': 'Exclusive Collabs',
+  'retro-basketball': 'Shoes',
+  'y2k-runners': 'Shoes',
+  'streetwear-essentials': 'Dress & Clothing',
+  'vault-collabs': 'Exclusive Collabs',
+  'technical-outerwear': 'Outerwear',
+  'limited-drops-care': 'Accessories',
+  'new-arrivals': 'New Arrivals',
+  'automated-collection': 'Automated Collection',
+  'top-best-deals': 'Top Best Deals',
+  'hydrogen': 'Hydrogen',
+}
+
 export default function CollectionsPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
-  const [activeFilter, setActiveFilter] = useState('all')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlCategory = searchParams.get('category') || 'all'
+
+  const [activeFilter, setActiveFilter] = useState(urlCategory)
+
+  // Keep activeFilter in sync when URL changes (e.g. clicking footer links)
+  useEffect(() => {
+    if (urlCategory && urlCategory !== activeFilter) {
+      setActiveFilter(urlCategory)
+    }
+  }, [urlCategory])
+
+  const handleSelectFilter = (filterId) => {
+    setActiveFilter(filterId)
+    if (filterId === 'all') {
+      setSearchParams({})
+    } else {
+      setSearchParams({ category: filterId })
+    }
+  }
   const {
     items: cart,
     cartCount,
@@ -52,27 +90,22 @@ export default function CollectionsPage({ onNavigate, onSelectProduct }) {
   }
 
   const handleSelectCollection = (collection) => {
-    showToast(`Exploring ${collection.title}...`)
-    if (onSelectProduct && collection.productId) {
-      onSelectProduct(collection.productId)
-    } else if (collection.productId) {
-      navigate(`/product/${collection.productId}`)
-    }
+    if (!collection) return
+    const targetCategory =
+      CATEGORY_MAP[collection.category] ||
+      collection.targetCategory ||
+      CATEGORY_MAP[collection.id] ||
+      collection.category ||
+      collection.title
+
+    const displayTitle = CATEGORY_MAP[collection.category] || collection.title
+    showToast(`Opening ${displayTitle} collection...`)
+    navigate(`/products?category=${encodeURIComponent(targetCategory)}`)
   }
 
-  const handleDiscoverDrop = (dropItem) => {
-    const item = dropItem || featuredDrop
-    const targetId = item?.productId || item?.id
-    showToast(`Opening ${item?.name || 'featured drop'} allocation...`)
-    if (onSelectProduct && targetId) {
-      onSelectProduct(targetId)
-    } else if (targetId) {
-      navigate(`/product/${targetId}`)
-    } else if (onNavigate) {
-      onNavigate('PRODUCTS')
-    } else {
-      navigate('/products')
-    }
+  const handleDiscoverDrop = () => {
+    showToast('Opening Retro Basketball drop collection...')
+    navigate('/products?category=Retro%20Basketball')
   }
 
   const handleNavClick = (navItem) => {
@@ -136,7 +169,7 @@ export default function CollectionsPage({ onNavigate, onSelectProduct }) {
         {/* 2. Horizontal Filter Bar */}
         <CollectionsFilterBar
           activeFilter={activeFilter}
-          onSelectFilter={setActiveFilter}
+          onSelectFilter={handleSelectFilter}
         />
 
         {/* 3. 6 High-Impact Showcase Cards Grid */}

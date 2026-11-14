@@ -1,9 +1,14 @@
 export const CATALOG_COLLECTIONS = [
   'All',
-  'Home page',
+  'Retro Basketball',
+  'Running & Lifestyle',
+  'Apparel & Hoodies',
+  'Exclusive Collabs',
+  'Technical Outerwear',
+  'Limited Drops & Care',
+  'Top Best Deals',
   'Automated Collection',
   'Hydrogen',
-  'Top Best Deals',
 ]
 
 export const CATALOG_SIZES = [

@@ -1,11 +1,31 @@
 import Collection from '../models/Collection.js'
+import { COLLECTIONS } from '../data/mockData.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 
 export const getCollections = asyncHandler(async (req, res) => {
   const { category } = req.query
   const query = category && category !== 'all' ? { category } : {}
-  const list = await Collection.find(query).sort({ createdAt: 1 }).lean()
+  let list = []
+
+  try {
+    list = await Collection.find(query).sort({ createdAt: 1 }).lean()
+  } catch (err) {
+    console.warn('[COLLECTIONS DB WARNING]:', err.message)
+  }
+
+  // If DB returned old product-level mock data or is empty, use authoritative collections list
+  const hasValidCollections =
+    Array.isArray(list) &&
+    list.length > 0 &&
+    list.some((c) => c.targetCategory || (typeof c.id === 'string' && c.id.startsWith('col-')))
+
+  if (!hasValidCollections) {
+    list = category && category !== 'all'
+      ? COLLECTIONS.filter((col) => col.category === category || col.id === category)
+      : COLLECTIONS
+  }
+
   res.json({
     success: true,
     count: list.length,

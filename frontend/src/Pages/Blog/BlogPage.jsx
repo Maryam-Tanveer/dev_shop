@@ -39,7 +39,12 @@ export default function BlogPage({ onNavigate, onSelectProduct }) {
   }
 
   const handleReadPost = (post) => {
-    showToast(`Opening editorial dispatch: "${post.title}"`)
+    if (!post?.id) return
+    if (onNavigate) {
+      onNavigate('BLOG_DETAIL', post.id)
+    } else {
+      navigate(`/blog/${post.id}`)
+    }
   }
 
   const handleSubscribe = (email) => {

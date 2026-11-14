@@ -1,11 +1,10 @@
-import { ArrowRight, ShieldCheck, RotateCcw, Lock, Info, MessageSquare } from 'lucide-react'
+import { ArrowRight, ShieldCheck, RotateCcw, Lock, Info } from 'lucide-react'
 
 export default function CartOrderSummary({
   subtotal: propSubtotal = 0,
   serverTotals,
   itemCount = 0,
   onProceedCheckout,
-  onOpenChat,
 }) {
   const subtotal = serverTotals?.subtotal ?? propSubtotal ?? 0
   const tax = serverTotals?.tax ?? Number((subtotal * 0.08).toFixed(2))
@@ -108,26 +107,6 @@ export default function CartOrderSummary({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Sizing Support Box */}
-      <div className="bg-white rounded-3xl border border-neutral-200/90 p-4 sm:p-5 flex items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-rose-50 text-[#c81d25] flex items-center justify-center flex-shrink-0">
-            <MessageSquare className="w-5 h-5 stroke-[2.2]" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-neutral-900">Have questions about sizing?</h4>
-            <p className="text-[11px] text-neutral-500">Chat live with our streetwear specialists 24/7</p>
-          </div>
-        </div>
-
-        <button
-          onClick={onOpenChat}
-          className="text-xs font-bold text-[#c81d25] hover:underline whitespace-nowrap"
-        >
-          Chat Now
-        </button>
       </div>
     </div>
   )

@@ -334,3 +334,50 @@ export const sendDropAlertEmail = async ({ email, dropTitle, releaseDate, dropUr
     return { success: false, error: err.message }
   }
 }
+
+/**
+ * Send Newsletter Welcome Email
+ */
+export const sendNewsletterWelcomeEmail = async ({ email }) => {
+  if (!email) return { success: false, error: 'No email provided' }
+
+  try {
+    const mailer = await getTransporter()
+    const fromAddress = process.env.EMAIL_FROM || '"Dev Shop" <newsletter@devshop.io>'
+
+    const mailOptions = {
+      from: fromAddress,
+      to: email,
+      subject: "You're on the list! Welcome to Dev Shop",
+      html: `
+        <div style="font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; background: #121212; color: #f5f5f5; padding: 36px; border-radius: 16px; max-width: 520px; margin: auto; border: 1px solid #262626;">
+          <div style="margin-bottom: 24px;">
+            <span style="font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">DEV SHOP</span>
+            <span style="color: #c81d25; font-size: 22px; margin-left: 2px;">•</span>
+          </div>
+          <h2 style="font-size: 22px; font-weight: 800; color: #ffffff; margin-bottom: 12px;">You're subscribed!</h2>
+          <p style="font-size: 14px; line-height: 1.6; color: #a3a3a3; margin-bottom: 20px;">
+            Thank you for subscribing to Dev Shop. You will now receive first-access notifications on new arrivals, exclusive releases, and member perks.
+          </p>
+          <div style="background: #1a1a1a; padding: 16px 20px; border-radius: 12px; border: 1px solid #333; margin-bottom: 24px;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; letter-spacing: 0.5px;">Subscribed Email</div>
+            <div style="font-size: 13px; color: #ffffff; font-weight: 600;">${email}</div>
+          </div>
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products" style="display: inline-block; background: #c81d25; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 9999px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Explore Catalog →
+          </a>
+        </div>
+      `,
+    }
+
+    const info = await mailer.sendMail(mailOptions)
+    const previewUrl = nodemailer.getTestMessageUrl(info)
+    if (previewUrl) {
+      console.log(`[NEWSLETTER PREVIEW URL] 🔗 Welcome email preview: ${previewUrl}`)
+    }
+    return { success: true, messageId: info.messageId, previewUrl }
+  } catch (err) {
+    console.error('[EMAIL ERROR] Failed to send newsletter welcome email:', err.message)
+    return { success: false, error: err.message }
+  }
+}

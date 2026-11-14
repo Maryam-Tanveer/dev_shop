@@ -194,10 +194,9 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
         ) : (
           /* FILLED CART PAGE EXPERIENCE */
           <>
-            {/* Header with Breadcrumb & Action Badges */}
+            {/* Header with Breadcrumb */}
             <CartHeader
               itemCount={items.length}
-              onOpenSlideOver={() => setIsDrawerOpen(true)}
               onBackToHome={() => (onNavigate ? onNavigate('HOME') : navigate('/'))}
             />
 
@@ -237,7 +236,6 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
                         navigate('/checkout')
                       }
                     }}
-                    onOpenChat={() => showToast('Connecting to 24/7 streetwear advisor...')}
                   />
                 </div>
               </div>

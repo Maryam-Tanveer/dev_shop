@@ -19,6 +19,7 @@ const WishlistPage = lazy(() => import('./Pages/Wishlist/WishlistPage'))
 const CartPage = lazy(() => import('./Pages/Cart/CartPage'))
 const FaqPage = lazy(() => import('./Pages/Faq/FaqPage'))
 const BlogPage = lazy(() => import('./Pages/Blog/BlogPage'))
+const BlogDetailPage = lazy(() => import('./Pages/Blog/BlogDetailPage'))
 const CollectionsPage = lazy(() => import('./Pages/Collections/CollectionsPage'))
 const CheckoutPage = lazy(() => import('./Pages/Checkout/CheckoutPage'))
 const ProductsCatalogPage = lazy(() => import('./Pages/Product/ProductsCatalogPage'))
@@ -98,6 +99,7 @@ function AppRoutes() {
         />
         <Route path="/collections" element={<CollectionsPage />} />
         <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:id" element={<BlogDetailPage />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/login" element={<LoginPage />} />

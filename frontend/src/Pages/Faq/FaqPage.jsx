@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Navbar from '../../Components/Navbar'
 import Footer from '../../Components/Footer'
 import CartDrawer from '../../Components/CartDrawer'
@@ -11,6 +11,11 @@ import { useCart } from '../../context/CartContext'
 
 export default function FaqPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const urlCategory = searchParams.get('category') || 'shipping'
+  const urlItem = searchParams.get('item') || ''
+
   const {
     items: cartItems,
     removeFromCart,
@@ -18,10 +23,23 @@ export default function FaqPage({ onNavigate, onSelectProduct }) {
     openDrawer,
     closeDrawer,
   } = useCart()
-  const [activeCategory, setActiveCategory] = useState('shipping')
+
+  const [activeCategory, setActiveCategory] = useState(urlCategory)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('FAQ')
   const [toast, setToast] = useState(null)
+
+  // Keep state in sync if URL query parameter changes
+  useEffect(() => {
+    if (urlCategory && urlCategory !== activeCategory) {
+      setActiveCategory(urlCategory)
+    }
+  }, [urlCategory])
+
+  const handleSelectCategory = (catId) => {
+    setActiveCategory(catId)
+    setSearchParams({ category: catId })
+  }
 
   const showToast = (message) => {
     setToast(message)
@@ -81,12 +99,15 @@ export default function FaqPage({ onNavigate, onSelectProduct }) {
         {/* 1. FAQ Hero with Breadcrumb & Category Pills */}
         <FaqHero
           activeCategory={activeCategory}
-          onSelectCategory={setActiveCategory}
+          onSelectCategory={handleSelectCategory}
           onBackToHome={() => onNavigate && onNavigate('HOME')}
         />
 
         {/* 2. Accordion List with Badges */}
-        <FaqAccordion activeCategory={activeCategory} />
+        <FaqAccordion
+          activeCategory={activeCategory}
+          initialOpenId={urlItem}
+        />
 
         {/* 3. Contact Support Callout Card */}
         <FaqContactBanner

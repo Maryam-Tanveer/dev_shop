@@ -11,19 +11,49 @@ export const NAV_LINKS = [
 ]
 
 export const FOOTER_COLLECTIONS_LINKS = [
-  'New Arrivals',
-  'Retro Basketball',
-  'Running & Lifestyle',
-  'Exclusive Collabs',
-  'Apparel & Hoodies',
+  {
+    label: 'New Arrivals',
+    path: '/collections?category=new-arrivals',
+  },
+  {
+    label: 'Retro Basketball',
+    path: '/collections?category=retro-basketball',
+  },
+  {
+    label: 'Running & Lifestyle',
+    path: '/collections?category=y2k-runners',
+  },
+  {
+    label: 'Exclusive Collabs',
+    path: '/collections?category=vault-collabs',
+  },
+  {
+    label: 'Apparel & Hoodies',
+    path: '/collections?category=streetwear-essentials',
+  },
 ]
 
 export const FOOTER_SUPPORT_LINKS = [
-  'Authenticity Guarantee',
-  'Order Tracking',
-  'Shipping & Delivery',
-  'Returns & Exchanges',
-  'FAQ & Help Desk',
+  {
+    label: 'Authenticity Guarantee',
+    path: '/faq?category=authentication&item=authentication-process',
+  },
+  {
+    label: 'Order Tracking',
+    path: '/faq?category=shipping&item=track-order',
+  },
+  {
+    label: 'Shipping & Delivery',
+    path: '/faq?category=shipping&item=delivery-time',
+  },
+  {
+    label: 'Returns & Exchanges',
+    path: '/faq?category=returns&item=return-policy',
+  },
+  {
+    label: 'FAQ & Help Desk',
+    path: '/faq',
+  },
 ]
 
 export const TRUST_PERKS = [

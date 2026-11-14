@@ -39,37 +39,6 @@ export default function BlogHeader({ onBackToHome }) {
             Unpacking global sneaker culture, archival silhouette breakdowns, verified drop forensics, and avant-garde streetwear editorials curated by tastemakers and industry insiders.
           </p>
         </div>
-
-        {/* Right Curators Card */}
-        <div className="bg-white rounded-2xl border border-neutral-200/90 p-4 sm:p-5 flex items-center gap-4 shadow-2xs self-start lg:self-auto flex-shrink-0">
-          <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block mb-0.5">
-              ACTIVE WRITERS
-            </span>
-            <div className="text-lg font-black text-neutral-900 leading-none">
-              14 Curators
-            </div>
-          </div>
-
-          {/* Overlapping Avatar Stack */}
-          <div className="flex items-center -space-x-2.5">
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
-              alt="Curator 1"
-              className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-2xs"
-            />
-            <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80"
-              alt="Curator 2"
-              className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-2xs"
-            />
-            <img
-              src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80"
-              alt="Curator 3"
-              className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-2xs"
-            />
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { HelpCircle, Truck, CreditCard, RotateCcw, ShieldCheck } from 'lucide-react'
 import { api } from '../../services/api'
+import { FALLBACK_FAQ_CATEGORIES } from '../../data/faqs'
 
 const iconMap = {
   shipping: Truck,
@@ -15,7 +16,7 @@ export default function FaqHero({
   onSelectCategory,
   onBackToHome
 }) {
-  const [categories, setCategories] = useState([])
+  const [categories, setCategories] = useState(FALLBACK_FAQ_CATEGORIES)
 
   useEffect(() => {
     let isMounted = true
@@ -46,13 +47,13 @@ export default function FaqHero({
           Home
         </Link>
         <span className="mx-1.5">/</span>
-        <span className="text-neutral-600 font-semibold">Shop Experience</span>
+        <span className="text-neutral-900 font-bold">FAQ</span>
       </div>
 
       {/* Small Badge */}
       <div className="inline-flex items-center gap-1.5 bg-neutral-100 text-neutral-600 text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border border-neutral-200/80 mb-3 tracking-widest">
         <HelpCircle className="w-3.5 h-3.5 text-[#c81d25]" />
-        <span>SUPPORT KNOWLEDGE BASE</span>
+        <span>HELP & KNOWLEDGE BASE</span>
       </div>
 
       {/* Main Title */}
@@ -68,7 +69,7 @@ export default function FaqHero({
       {/* Category Tabs */}
       <div className="flex flex-wrap items-center justify-center gap-2.5">
         {categories.map((cat) => {
-          const Icon = cat.icon || iconMap[cat.id] || HelpCircle
+          const Icon = iconMap[cat.id] || (typeof cat.icon === 'function' ? cat.icon : HelpCircle)
           const isActive = activeCategory === cat.id
 
           return (
@@ -77,7 +78,7 @@ export default function FaqHero({
               onClick={() => onSelectCategory && onSelectCategory(cat.id)}
               className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-2xs ${
                 isActive
-                  ? 'bg-[#b91c1c] text-white shadow-sm'
+                  ? 'bg-[#c81d25] text-white shadow-sm'
                   : 'bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border border-neutral-200/60'
               }`}
             >

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { ArrowUpRight, ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
+import { COLLECTIONS_DATA as FALLBACK_DATA } from '../../data/collections'
 
 export default function CollectionsGrid({
   activeFilter = 'all',
   onSelectCollection
 }) {
-  const [collections, setCollections] = useState([])
+  const [collections, setCollections] = useState(FALLBACK_DATA)
 
   useEffect(() => {
     let isMounted = true
@@ -21,7 +22,7 @@ export default function CollectionsGrid({
         console.error('Failed to load collections from API:', err)
       })
 
-    return () => {
+    return () => {                                                                                                                                                                                                                                                                                                                                                                                                        
       isMounted = false
     }
   }, [])
@@ -37,11 +38,11 @@ export default function CollectionsGrid({
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#c81d25] animate-pulse" />
           <span className="text-xs font-black uppercase tracking-wider text-neutral-800">
-            {activeFilter === 'all' ? 'All Verified Vault Drops' : activeFilter.replace(/-/g, ' ')}
+            {activeFilter === 'all' ? 'All Verified Vault Collections' : activeFilter.replace(/-/g, ' ')}
           </span>
         </div>
         <span className="text-xs font-bold text-neutral-500">
-          {displayedCollections.length} {displayedCollections.length === 1 ? 'Curated Product' : 'Curated Products'} Available
+          {displayedCollections.length} {displayedCollections.length === 1 ? 'Curated Collection' : 'Curated Collections'} Available
         </span>
       </div>
 
@@ -62,15 +63,15 @@ export default function CollectionsGrid({
               <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/30" />
             </div>
 
-            {/* Top Row: Badge, Price Pill & Up-Right Arrow Button */}
+            {/* Top Row: Badge, Styles Pill & Up-Right Arrow Button */}
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-[#c81d25] text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full shadow-md tracking-wider">
                   {col.badge}
                 </span>
-                {col.price && (
-                  <span className="bg-white/95 backdrop-blur-md text-neutral-900 text-[11px] font-black px-3 py-1 rounded-full shadow-xs tracking-tight">
-                    ${Number(col.price).toFixed(2)}
+                {col.itemCount && (
+                  <span className="bg-white/95 backdrop-blur-md text-neutral-900 text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-xs tracking-wider">
+                    {col.itemCount} Products
                   </span>
                 )}
               </div>

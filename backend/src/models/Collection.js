@@ -45,6 +45,14 @@ const collectionSchema = new mongoose.Schema(
       default: 'all',
       index: true,
     },
+    targetCategory: {
+      type: String,
+      default: '',
+    },
+    itemCount: {
+      type: Number,
+      default: 0,
+    },
     image: {
       type: String,
       default: '',

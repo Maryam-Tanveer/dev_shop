@@ -1,10 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Plus, Minus } from 'lucide-react'
 import { api } from '../../services/api'
+import { FALLBACK_FAQS } from '../../data/faqs'
 
-export default function FaqAccordion({ activeCategory }) {
-  const [faqs, setFaqs] = useState([])
-  const [openId, setOpenId] = useState('track-order')
+export default function FaqAccordion({ activeCategory, initialOpenId }) {
+  const [faqs, setFaqs] = useState(FALLBACK_FAQS)
+  const [openId, setOpenId] = useState(initialOpenId || 'track-order')
+
+  // Open specific FAQ item and smooth scroll to it when URL param changes
+  useEffect(() => {
+    if (initialOpenId) {
+      setOpenId(initialOpenId)
+      setTimeout(() => {
+        const el = document.getElementById(`faq-${initialOpenId}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 120)
+    }
+  }, [initialOpenId, activeCategory])
 
   useEffect(() => {
     let isMounted = true
@@ -42,9 +56,10 @@ export default function FaqAccordion({ activeCategory }) {
         return (
           <div
             key={faq.id}
+            id={`faq-${faq.id}`}
             className={`bg-white rounded-3xl border transition-all duration-300 overflow-hidden shadow-2xs ${
               isOpen
-                ? 'border-neutral-300 ring-1 ring-neutral-200'
+                ? 'border-[#c81d25] ring-2 ring-[#c81d25]/20 shadow-md'
                 : 'border-neutral-200/90 hover:border-neutral-300'
             }`}
           >
@@ -79,17 +94,20 @@ export default function FaqAccordion({ activeCategory }) {
                 <p className="mb-4">{faq.answer}</p>
 
                 {/* Badges */}
-                {faq.badges && faq.badges.length > 0 && (
+                {Array.isArray(faq.badges) && faq.badges.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     {faq.badges.map((b, idx) => {
-                      const Icon = b.icon
+                      const IconComponent = typeof b?.icon === 'function' ? b.icon : null
+                      const badgeText = typeof b === 'string' ? b : b?.text || ''
+                      const badgeColor = b?.color || 'bg-neutral-100 text-neutral-700 border-neutral-200'
+
                       return (
                         <span
                           key={idx}
-                          className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border tracking-wider ${b.color}`}
+                          className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase px-3 py-1 rounded-full border tracking-wider ${badgeColor}`}
                         >
-                          <Icon className="w-3 h-3" />
-                          <span>{b.text}</span>
+                          {IconComponent && <IconComponent className="w-3 h-3" />}
+                          <span>{badgeText}</span>
                         </span>
                       )
                     })}

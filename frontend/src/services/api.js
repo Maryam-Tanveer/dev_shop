@@ -98,12 +98,27 @@ export const api = {
   },
 
   /**
-   * Fetch products with optional filtering (category, brand, search query)
+   * Fetch products with backend filtering:
+   * Supports category, brand, brands, minPrice, maxPrice, size, sizes, sort, and search query (q).
    */
   async getProducts(params = {}) {
     const queryParams = new URLSearchParams()
     if (params.category && params.category !== 'All') queryParams.append('category', params.category)
     if (params.brand && params.brand !== 'All') queryParams.append('brand', params.brand)
+    if (Array.isArray(params.brands) && params.brands.length > 0) {
+      queryParams.append('brands', params.brands.join(','))
+    }
+    if (params.minPrice !== undefined && params.minPrice !== null && Number(params.minPrice) > 0) {
+      queryParams.append('minPrice', params.minPrice)
+    }
+    if (params.maxPrice !== undefined && params.maxPrice !== null && Number(params.maxPrice) < 1000) {
+      queryParams.append('maxPrice', params.maxPrice)
+    }
+    if (params.size && params.size !== 'All') queryParams.append('size', params.size)
+    if (Array.isArray(params.sizes) && params.sizes.length > 0) {
+      queryParams.append('sizes', params.sizes.join(','))
+    }
+    if (params.sort && params.sort !== 'Featured') queryParams.append('sort', params.sort)
     if (params.q) queryParams.append('q', params.q)
 
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : ''
@@ -229,11 +244,30 @@ export const api = {
   },
 
   /**
-   * Fetch blog articles
+   * Fetch blog articles with optional category filtering
    */
-  async getBlogs() {
-    const res = await request('/blogs')
+  async getBlogs(params = {}) {
+    const queryParams = new URLSearchParams()
+    if (params.category && params.category !== 'all') {
+      queryParams.append('category', params.category)
+    }
+    const qs = queryParams.toString() ? `?${queryParams.toString()}` : ''
+    const res = await request(`/blogs${qs}`)
     return res.data || res || []
+  },
+
+  /**
+   * Fetch single blog article by ID
+   */
+  async getBlogById(id) {
+    if (!id) return null
+    try {
+      const res = await request(`/blogs/${encodeURIComponent(id)}`)
+      return res.data || res || null
+    } catch (err) {
+      if (err.status === 404) return null
+      throw err
+    }
   },
 
   /**
@@ -346,6 +380,16 @@ export const api = {
     return request('/drops/subscribe-alert', {
       method: 'POST',
       body: JSON.stringify({ email, dropTitle }),
+    })
+  },
+
+  /**
+   * Subscribe to Newsletter (persists subscriber & dispatches welcome email)
+   */
+  async subscribeNewsletter(email, source = 'footer_newsletter') {
+    return request('/newsletter/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ email, source }),
     })
   },
 
