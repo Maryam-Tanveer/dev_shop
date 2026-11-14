@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, ShoppingBag, Heart, ChevronDown, X, Loader2, ArrowRight } from 'lucide-react'
+import { Search, ShoppingBag, Heart, X, Loader2, ArrowRight } from 'lucide-react'
 import { api } from '../services/api'
 import { NAV_LINKS } from '../data/navigation'
 import { ROUTE_MAP } from '../hooks/useAppNavigate'
@@ -142,7 +142,7 @@ export default function Navbar({
     <>
       {/* 1. TOP BLACK UTILITY BAR */}
       <div className="bg-[#121212] text-neutral-300 text-[11px] font-semibold border-b border-neutral-800">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-2.5 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-2.5 flex items-center">
           {/* Navigation Links */}
           <nav aria-label="Main navigation" className="flex items-center gap-6 sm:gap-7 tracking-wider uppercase overflow-x-auto overflow-y-hidden no-scrollbar">
             {navLinks.map((item) => {
@@ -164,19 +164,6 @@ export default function Navbar({
               )
             })}
           </nav>
-
-          {/* Currency / Language */}
-          <div className="hidden sm:flex items-center gap-4 text-neutral-400 font-medium">
-            <button type="button" aria-label="Select language" className="flex items-center gap-1 hover:text-white transition cursor-pointer">
-              <span>English</span>
-              <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
-            </button>
-            <span className="text-neutral-700" aria-hidden="true">|</span>
-            <button type="button" aria-label="Select currency" className="flex items-center gap-1 hover:text-white transition cursor-pointer">
-              <span>USD</span>
-              <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
-            </button>
-          </div>
         </div>
       </div>
 
