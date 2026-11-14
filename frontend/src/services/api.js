@@ -167,6 +167,36 @@ export const api = {
   },
 
   /**
+   * Fetch authenticated user's cart from database
+   */
+  async getCart() {
+    const res = await request('/cart', {
+      method: 'GET',
+    })
+    return res.data || res
+  },
+
+  /**
+   * Sync user cart items to MongoDB for persistence across devices
+   */
+  async syncCart(items = [], shippingMethod = 'standard') {
+    const res = await request('/cart/sync', {
+      method: 'POST',
+      body: JSON.stringify({ items, shippingMethod }),
+    })
+    return res.data || res
+  },
+
+  /**
+   * Clear user cart from MongoDB
+   */
+  async clearServerCart() {
+    return request('/cart', {
+      method: 'DELETE',
+    })
+  },
+
+  /**
    * Fetch wishlist recommendations
    */
   async getWishlistRecommendations() {

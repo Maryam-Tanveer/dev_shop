@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { api } from '../services/api'
+import { useAuth } from './AuthContext'
 
 /**
  * Storage version key: Stores strictly minimal variant descriptors:
@@ -35,6 +36,8 @@ export const DEFAULT_CART_ITEMS = []
 const CartContext = createContext(null)
 
 export function CartProvider({ children }) {
+  const { isAuthenticated, currentUser } = useAuth()
+
   // rawItems contains ONLY: [ { productId, size, colorway, qty } ]
   const [rawItems, setRawItems] = useState(() => {
     try {
@@ -90,7 +93,47 @@ export function CartProvider({ children }) {
     }
   }, [rawItems])
 
-  // Sync with backend API to fetch authoritative server prices & metadata
+  // Pull remote cart from database when authenticated
+  useEffect(() => {
+    let isMounted = true
+    if (isAuthenticated) {
+      api
+        .getCart()
+        .then((res) => {
+          if (!isMounted) return
+          const remoteRaw = res?.data?.rawItems || res?.rawItems
+          if (Array.isArray(remoteRaw) && remoteRaw.length > 0) {
+            setRawItems((local) => {
+              if (!local || local.length === 0) return remoteRaw
+
+              const map = new Map()
+              for (const it of remoteRaw) {
+                const k = createVariantKey(it.productId, it.size, it.colorway)
+                map.set(k, { ...it })
+              }
+              for (const it of local) {
+                const k = createVariantKey(it.productId, it.size, it.colorway)
+                if (map.has(k)) {
+                  map.get(k).qty = Math.max(map.get(k).qty, it.qty)
+                } else {
+                  map.set(k, { ...it })
+                }
+              }
+              return Array.from(map.values())
+            })
+          }
+        })
+        .catch((err) => {
+          console.warn('[Cart Sync Notice]:', err.message)
+        })
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [isAuthenticated, currentUser?.id])
+
+  // Sync with backend API to fetch authoritative server prices & metadata (and persist to DB if authenticated)
   const syncWithServer = useCallback(async (itemsToPrice) => {
     if (!itemsToPrice || itemsToPrice.length === 0) {
       setHydratedItems([])
@@ -110,7 +153,10 @@ export function CartProvider({ children }) {
     setIsLoadingPrices(true)
     setPricingError(null)
     try {
-      const result = await api.priceCart(itemsToPrice)
+      const result = isAuthenticated
+        ? await api.syncCart(itemsToPrice)
+        : await api.priceCart(itemsToPrice)
+
       if (result && Array.isArray(result.items) && result.items.length > 0) {
         setHydratedItems(result.items)
         setServerTotals({
@@ -152,7 +198,7 @@ export function CartProvider({ children }) {
     } finally {
       setIsLoadingPrices(false)
     }
-  }, [])
+  }, [isAuthenticated])
 
   // Re-sync with server whenever rawItems changes
   useEffect(() => {
@@ -160,9 +206,6 @@ export function CartProvider({ children }) {
   }, [rawItems, syncWithServer])
 
   const totalItemCount = rawItems.reduce((sum, it) => sum + (it.qty || 1), 0)
-
-  // Subtotal is dynamically derived from authoritative server pricing
-  const subtotal = serverTotals.subtotal || 0
 
   /**
    * addToCart:
@@ -280,6 +323,10 @@ export function CartProvider({ children }) {
 
   const clearCart = () => {
     setRawItems([])
+    setHydratedItems([])
+    if (isAuthenticated) {
+      api.clearServerCart().catch(() => {})
+    }
   }
 
   const resetToSampleCart = () => {
@@ -327,7 +374,23 @@ export function CartProvider({ children }) {
 export function useCart() {
   const context = useContext(CartContext)
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider')
+    return {
+      items: [],
+      rawItems: [],
+      cartCount: 0,
+      subtotal: 0,
+      tax: 0,
+      shipping: 0,
+      total: 0,
+      addToCart: () => {},
+      removeFromCart: () => {},
+      updateQuantity: () => {},
+      clearCart: () => {},
+      openDrawer: () => {},
+      closeDrawer: () => {},
+      toggleDrawer: () => {},
+      isDrawerOpen: false,
+    }
   }
   return context
 }

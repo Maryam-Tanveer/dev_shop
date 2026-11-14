@@ -3,17 +3,12 @@ import { useAuth } from '../../context/AuthContext'
 
 export default function AccountSidebarWidgets({
   onEditShipping,
-  onManagePayment,
+  onManagePayment: _onManagePayment,
   onViewWishlist,
   onExploreTierPerks,
-  onAddCard
+  onAddCard: _onAddCard
 }) {
-  let auth = null
-  try {
-    auth = useAuth()
-  } catch (e) {
-    // fallback outside provider
-  }
+  const auth = useAuth()
   const currentUser = auth?.currentUser
   const recipientName = currentUser?.name || 'Dev Shop Member'
   const defaultAddr = currentUser?.addresses?.find((a) => a.isDefault) || currentUser?.addresses?.[0]

@@ -2,6 +2,7 @@ import Joi from 'joi'
 
 export const priceCartSchema = {
   body: Joi.object({
+    shippingMethod: Joi.string().allow('', null).optional(),
     items: Joi.array()
       .items(
         Joi.object({
@@ -20,16 +21,18 @@ export const priceCartSchema = {
 
 export const syncCartSchema = {
   body: Joi.object({
-    guestId: Joi.string().allow('', null),
+    guestId: Joi.string().allow('', null).optional(),
+    shippingMethod: Joi.string().allow('', null).optional(),
     items: Joi.array()
       .items(
         Joi.object({
           productId: Joi.string().required(),
-          size: Joi.string().default('M'),
-          colorway: Joi.string().default('Default'),
-          quantity: Joi.number().integer().min(1).default(1),
+          size: Joi.string().allow('', null).default('M'),
+          colorway: Joi.string().allow('', null).default('Default'),
+          qty: Joi.number().integer().min(1).max(99).optional(),
+          quantity: Joi.number().integer().min(1).max(99).optional(),
         })
       )
-      .required(),
+      .default([]),
   }),
 }

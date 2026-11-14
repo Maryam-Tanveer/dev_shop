@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { User, Shield, Lock, Phone, FileText, CheckCircle2, AlertCircle, Camera, Save, KeyRound } from 'lucide-react'
+import { User, Shield, Lock, Phone, Save, KeyRound } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 

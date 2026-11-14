@@ -11,7 +11,7 @@ export default function CartCrossSells({
 }) {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
-  const [offset, setOffset] = useState(0)
+  const [_offset, setOffset] = useState(0)
 
   useEffect(() => {
     let isMounted = true

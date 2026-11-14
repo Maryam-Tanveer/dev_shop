@@ -6,12 +6,7 @@ export default function OrderShippingDestination({
   recipientName: propRecipientName,
   onAddGateCode
 }) {
-  let auth = null
-  try {
-    auth = useAuth()
-  } catch (e) {
-    // fallback outside provider
-  }
+  const auth = useAuth()
   const defaultUserAddress = auth?.currentUser?.addresses?.find((a) => a.isDefault) || auth?.currentUser?.addresses?.[0]
   const resolvedAddress = shippingAddress || defaultUserAddress
 

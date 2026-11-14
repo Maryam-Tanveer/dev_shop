@@ -1,4 +1,4 @@
-import { ShieldAlert, Fingerprint } from 'lucide-react'
+import { Fingerprint } from 'lucide-react'
 
 export default function AntiCounterfeitPolicyCard() {
   return (

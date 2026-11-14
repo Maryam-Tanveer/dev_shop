@@ -7,8 +7,13 @@ import { useAuth } from '../../context/AuthContext'
  * While session/JWT is being verified on mount, shows a premium DevShop loading state.
  * If unauthenticated, seamlessly redirects to /login preserving the requested path in location.state.from.
  */
-export default function ProtectedRoute({ children, redirectTo = '/login' }) {
-  const { isAuthenticated, loading } = useAuth()
+export default function ProtectedRoute({
+  children,
+  redirectTo = '/login',
+  requiredRole = null,
+  roleRedirectTo = '/'
+}) {
+  const { isAuthenticated, currentUser, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -27,6 +32,10 @@ export default function ProtectedRoute({ children, redirectTo = '/login' }) {
 
   if (!isAuthenticated) {
     return <Navigate to={redirectTo} state={{ from: location }} replace />
+  }
+
+  if (requiredRole && currentUser?.role !== requiredRole) {
+    return <Navigate to={roleRedirectTo} replace />
   }
 
   return children ? children : <Outlet />

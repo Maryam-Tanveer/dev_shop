@@ -115,6 +115,7 @@ export const login = asyncHandler(async (req, res, next) => {
       const isMatch = await comparePassword(password, demoUser.passwordHash)
       if (isMatch) {
         // If DB is connected, save the user into DB so it persists
+        const dbStatus = getDBStatus()
         if (dbStatus.connected) {
           try {
             const created = await User.create({

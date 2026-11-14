@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   ShieldCheck,
   ChevronDown,
+  ArrowRight,
 } from 'lucide-react'
 import { api } from '../../services/api'
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MapPin, Plus, Check, Trash2, Edit3, Home, Building2, Phone, Star, X } from 'lucide-react'
+import { MapPin, Plus, Trash2, Edit3, Home, Building2, Phone, Star, X } from 'lucide-react'
 import { api } from '../../services/api'
 
 export default function AccountAddresses({ onToast }) {

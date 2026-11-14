@@ -101,7 +101,14 @@ function AppRoutes() {
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/admin" element={<AdminPage />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminPage />
+            </ProtectedRoute>
+          }
+        />
         {/* 404 / Catch-all route renders NotFoundPage */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

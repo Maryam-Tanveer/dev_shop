@@ -17,7 +17,7 @@ import { api } from '../../services/api'
 export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { clearCart, cartCount } = useCart()
+  const { clearCart } = useCart()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [toast, setToast] = useState(null)

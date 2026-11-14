@@ -1,8 +1,8 @@
-import { Headphones, MessageSquare, Phone, ArrowRight, Plus } from 'lucide-react'
+import { Headphones, MessageSquare, ArrowRight, Plus } from 'lucide-react'
 
 export default function OrderHelpConcierge({
-  onChatClick,
-  onHotlineClick,
+  onChatClick: _onChatClick,
+  onHotlineClick: _onHotlineClick,
   onAddSuggested
 }) {
   return (

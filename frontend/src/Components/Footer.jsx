@@ -4,6 +4,8 @@ import { Sparkles, Share2 } from 'lucide-react'
 import { FOOTER_COLLECTIONS_LINKS, FOOTER_SUPPORT_LINKS } from '../data/navigation'
 import { api } from '../services/api'
 
+const CURRENT_YEAR = new Date().getFullYear()
+
 export default function Footer({ onSubscribe }) {
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
@@ -120,7 +122,7 @@ export default function Footer({ onSubscribe }) {
         {/* Bottom Strip */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-neutral-500">
           <div>
-            © {new Date().getFullYear()} Dev Shop Global Inc. All rights reserved.
+            © {CURRENT_YEAR} Dev Shop Global Inc. All rights reserved.
           </div>
           <div className="flex items-center gap-6">
             <Link to="/faq" className="hover:text-neutral-300 transition">Privacy & Terms</Link>

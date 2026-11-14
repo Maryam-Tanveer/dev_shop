@@ -16,7 +16,7 @@ export default function LoginPage({ onNavigate, onSelectProduct }) {
 
   const [cart, setCart] = useState([])
   const [isCartOpen, setIsCartOpen] = useState(false)
-  const [wishlist, setWishlist] = useState({ 'deal-1': true })
+  const [wishlist, _setWishlist] = useState({ 'deal-1': true })
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('CHECKOUT')
   const [toast, setToast] = useState(null)

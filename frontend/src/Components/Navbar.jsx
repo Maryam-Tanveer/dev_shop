@@ -22,26 +22,9 @@ export default function Navbar({
 }) {
   const navigate = useNavigate()
   const location = useLocation()
-  let cartCtx = null
-  try {
-    cartCtx = useCart()
-  } catch (e) {
-    // fallback if outside provider
-  }
-
-  let authCtx = null
-  try {
-    authCtx = useAuth()
-  } catch (e) {
-    // fallback if outside provider
-  }
-
-  let wishlistCtx = null
-  try {
-    wishlistCtx = useWishlist()
-  } catch (e) {
-    // fallback if outside provider
-  }
+  const cartCtx = useCart()
+  const authCtx = useAuth()
+  const wishlistCtx = useWishlist()
 
   const currentUser = authCtx?.currentUser
 

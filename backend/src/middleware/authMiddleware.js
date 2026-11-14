@@ -7,8 +7,16 @@ import { getDBStatus, connectDB } from '../config/db.js'
 dotenv.config()
 
 export const getJwtSecret = () => {
-  const secret = process.env.JWT_SECRET || 'devshop_super_secret_jwt_vault_production_key_2026_at_least_32_chars'
-  return secret
+  const secret = process.env.JWT_SECRET?.trim()
+  if (process.env.NODE_ENV === 'production') {
+    if (!secret) {
+      throw new Error(
+        '[SECURITY EXCEPTION] JWT_SECRET must be configured in environment variables in production. Execution aborted.'
+      )
+    }
+    return secret
+  }
+  return secret || 'devshop_local_development_jwt_vault_secret_only_for_testing'
 }
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'

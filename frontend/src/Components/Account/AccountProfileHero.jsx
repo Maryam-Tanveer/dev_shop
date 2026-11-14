@@ -1,4 +1,4 @@
-import { Mail, Settings, Shield, Package, Heart, MapPin, Award, LogOut, User } from 'lucide-react'
+import { Mail, Settings, Shield, Package, Heart, MapPin, Award, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 export default function AccountProfileHero({

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, PackageCheck, ArrowRight, X } from 'lucide-react'
+import { CheckCircle2, ArrowRight, X } from 'lucide-react'
 import Navbar from '../../Components/Navbar'
 import Footer from '../../Components/Footer'
 import CartDrawer from '../../Components/CartDrawer'
@@ -22,7 +22,6 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
   const {
     items: cartItems,
     removeFromCart,
-    cartCount,
     isDrawerOpen,
     openDrawer,
     closeDrawer,

@@ -1,5 +1,3 @@
-import { ShieldCheck, Tag } from 'lucide-react'
-
 export default function OrderPurchasedItems({ items: customItems }) {
   const items = (customItems && customItems.length > 0)
     ? customItems.map((item, idx) => ({

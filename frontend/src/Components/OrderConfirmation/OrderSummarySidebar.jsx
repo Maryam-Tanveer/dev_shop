@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Info, QrCode, FileText, ShoppingBag, Printer, Download, CheckCircle, X } from 'lucide-react'
+import { Info, QrCode, FileText, ShoppingBag, Printer, CheckCircle, X } from 'lucide-react'
 
 export default function OrderSummarySidebar({
   order,
   onViewAccount,
   onContinueShopping,
   onPrintInvoice,
-  onDownloadPdf
+  onDownloadPdf: _onDownloadPdf
 }) {
   const [showToast, setShowToast] = useState(true)
 

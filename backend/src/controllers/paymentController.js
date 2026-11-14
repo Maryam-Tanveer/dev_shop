@@ -1,11 +1,52 @@
 import crypto from 'crypto'
 import Stripe from 'stripe'
 import Order from '../models/Order.js'
+import Product from '../models/Product.js'
 import { getAuthoritativeProduct } from './cartController.js'
 import { sendOrderReceiptEmail } from '../services/emailService.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 import { calcTotals } from '../utils/pricing.js'
+
+/**
+ * Decrement inventory stock count and update stockStatus for purchased items
+ */
+export async function decrementInventoryForOrder(order) {
+  if (!order?.items || !Array.isArray(order.items)) return
+
+  for (const item of order.items) {
+    const rawId = item.productId || item.id
+    if (!rawId) continue
+    const pid = String(rawId).includes('::') ? String(rawId).split('::')[0] : String(rawId)
+    const qty = Math.max(1, parseInt(item.quantity || item.qty, 10) || 1)
+
+    try {
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(pid)
+      const query = isObjectId ? { $or: [{ id: pid }, { _id: pid }] } : { id: pid }
+
+      const product = await Product.findOne(query)
+      if (product) {
+        const currentStock = typeof product.stockCount === 'number' ? product.stockCount : 15
+        const updatedStock = Math.max(0, currentStock - qty)
+        product.stockCount = updatedStock
+        product.inStock = updatedStock > 0
+
+        if (updatedStock === 0) {
+          product.stockStatus = 'Sold Out'
+        } else if (updatedStock <= 3) {
+          product.stockStatus = 'Low Stock'
+        } else {
+          product.stockStatus = 'In Stock'
+        }
+
+        await product.save()
+        console.log(`[INVENTORY] Decremented stock for '${pid}': ${currentStock} -> ${updatedStock} (-${qty})`)
+      }
+    } catch (err) {
+      console.warn(`[INVENTORY WARNING] Failed to decrement stock for item '${pid}':`, err.message)
+    }
+  }
+}
 
 const getStripe = () => {
   const secret = process.env.STRIPE_SECRET_KEY
@@ -236,6 +277,9 @@ export const stripeWebhook = async (req, res) => {
         await order.save()
       }
 
+      // Automated Stock Decrement
+      await decrementInventoryForOrder(order)
+
       console.log(`[STRIPE WEBHOOK] Verified signature & confirmed order ${order.orderNumber} for $${paidAmount}`)
 
       // Dispatch receipt email
@@ -320,6 +364,9 @@ export const verifySession = asyncHandler(async (req, res, next) => {
   if (order.save) {
     await order.save()
   }
+
+  // Automated Stock Decrement
+  await decrementInventoryForOrder(order)
 
   sendOrderReceiptEmail(order).catch(() => {})
 

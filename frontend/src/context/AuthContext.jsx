@@ -216,7 +216,17 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    return {
+      currentUser: null,
+      token: null,
+      isAuthenticated: false,
+      loading: false,
+      login: async () => ({ success: false, error: 'Auth context unavailable' }),
+      signup: async () => ({ success: false, error: 'Auth context unavailable' }),
+      loginWithGoogle: async () => ({ success: false, error: 'Auth context unavailable' }),
+      logout: async () => {},
+      updateCurrentUser: () => {},
+    }
   }
   return context
 }

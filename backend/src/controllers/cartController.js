@@ -1,4 +1,5 @@
 import Product from '../models/Product.js'
+import Cart from '../models/Cart.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { calcTotals } from '../utils/pricing.js'
 
@@ -42,20 +43,13 @@ export const getAuthoritativeProduct = async (id) => {
 }
 
 /**
- * Controller to price and hydrate cart items with authoritative MongoDB data.
- * Request body: { items: [ { productId, size, colorway, qty } ] }
- * Ensures client never dictates item prices or discounts.
+ * Helper to hydrate and calculate authoritative totals for cart items
  */
-export const priceCart = asyncHandler(async (req, res) => {
-  const rawItems = Array.isArray(req.body.items)
-    ? req.body.items
-    : Array.isArray(req.body)
-    ? req.body
-    : []
-
+export const enrichCartItems = async (rawItems = [], shippingMethod = 'standard') => {
+  const list = Array.isArray(rawItems) ? rawItems : []
   const enrichedItems = []
 
-  for (const item of rawItems) {
+  for (const item of list) {
     const productId = item.productId || item.id
     if (!productId) continue
 
@@ -63,15 +57,12 @@ export const priceCart = asyncHandler(async (req, res) => {
     const colorway = item.colorway || ''
     const quantity = Math.max(1, parseInt(item.quantity ?? item.qty ?? 1, 10))
 
-    // Authoritative lookup directly from MongoDB
     const product = await getAuthoritativeProduct(productId)
-
     if (!product) {
       console.warn(`[Cart Pricing] Product '${productId}' not found in database catalog`)
       continue
     }
 
-    // Authoritative server-side pricing
     const serverPrice = typeof product.price === 'number'
       ? product.price
       : parseFloat(product.price) || 0
@@ -80,7 +71,6 @@ export const priceCart = asyncHandler(async (req, res) => {
       ? (typeof product.originalPrice === 'number' ? product.originalPrice : parseFloat(product.originalPrice))
       : serverPrice
 
-    // Check if a colorway-specific image exists
     let itemImage = product.image || ''
     if (colorway && Array.isArray(product.colorways)) {
       const matchedColor = product.colorways.find(
@@ -91,7 +81,6 @@ export const priceCart = asyncHandler(async (req, res) => {
       }
     }
 
-    // Unique variant identifier: compound key of productId, size, and colorway
     const variantKey = `${productId}::${size}::${colorway || 'standard'}`
 
     enrichedItems.push({
@@ -105,39 +94,155 @@ export const priceCart = asyncHandler(async (req, res) => {
       colorway: colorway || (product.colorways?.[0]?.name || 'Standard'),
       size: size,
       quantity: quantity,
-      price: serverPrice, // AUTHORITATIVE DATABASE PRICE
+      qty: quantity,
+      price: serverPrice,
       originalPrice: serverOriginalPrice,
       image: itemImage,
       badge: product.badge || 'CERTIFIED',
       badgeColor: product.badgeColor || 'bg-neutral-900 text-white',
       condition: product.condition || 'Deadstock Authentic',
       tag: product.tag || 'Vault Certified',
-      spec: product.fullTitle || ''
+      spec: product.fullTitle || '',
     })
   }
 
-  const shippingMethod = req.body.shippingMethod || 'standard'
-
-  // Calculate authoritative server totals using centralized calcTotals
   const subtotal = Number(
     enrichedItems.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)
   )
   const totals = calcTotals(subtotal, shippingMethod)
   const itemCount = enrichedItems.reduce((acc, item) => acc + item.quantity, 0)
 
+  return {
+    items: enrichedItems,
+    subtotal: totals.subtotal,
+    tax: totals.tax,
+    shipping: totals.shippingCost,
+    shippingCost: totals.shippingCost,
+    shippingMethod: totals.shippingMethod,
+    total: totals.totalAmount,
+    totalAmount: totals.totalAmount,
+    freeShippingThreshold: totals.freeShippingThreshold,
+    itemCount,
+  }
+}
+
+/**
+ * Controller to price and hydrate cart items with authoritative MongoDB data.
+ * Request body: { items: [ { productId, size, colorway, qty } ], shippingMethod }
+ */
+export const priceCart = asyncHandler(async (req, res) => {
+  const rawItems = req.body.items || req.body
+  const shippingMethod = req.body.shippingMethod || 'standard'
+  const enriched = await enrichCartItems(rawItems, shippingMethod)
+
+  res.json({
+    success: true,
+    data: enriched,
+  })
+})
+
+/**
+ * GET /api/cart
+ * Fetch authenticated user cart from database and hydrate with authoritative prices
+ */
+export const getCart = asyncHandler(async (req, res) => {
+  const userId = req.user?.id || req.user?._id
+  if (!userId) {
+    return res.json({
+      success: true,
+      data: {
+        items: [],
+        rawItems: [],
+        itemCount: 0,
+        subtotal: 0,
+        total: 0,
+      },
+    })
+  }
+
+  const cart = await Cart.findOne({ userId }).lean()
+  if (!cart || !cart.items || cart.items.length === 0) {
+    return res.json({
+      success: true,
+      data: {
+        items: [],
+        rawItems: [],
+        itemCount: 0,
+        subtotal: 0,
+        total: 0,
+      },
+    })
+  }
+
+  const enriched = await enrichCartItems(cart.items)
   res.json({
     success: true,
     data: {
-      items: enrichedItems,
-      subtotal: totals.subtotal,
-      tax: totals.tax,
-      shipping: totals.shippingCost,
-      shippingCost: totals.shippingCost,
-      shippingMethod: totals.shippingMethod,
-      total: totals.totalAmount,
-      totalAmount: totals.totalAmount,
-      freeShippingThreshold: totals.freeShippingThreshold,
-      itemCount,
+      ...enriched,
+      rawItems: cart.items.map((it) => ({
+        productId: it.productId,
+        size: it.size,
+        colorway: it.colorway,
+        qty: it.quantity,
+      })),
     },
+  })
+})
+
+/**
+ * POST /api/cart/sync
+ * Synchronize user cart items to MongoDB for persistence across devices
+ */
+export const syncCart = asyncHandler(async (req, res) => {
+  const userId = req.user?.id || req.user?._id
+  const rawItems = req.body.items || req.body || []
+  const shippingMethod = req.body.shippingMethod || 'standard'
+
+  const normalizedItems = (Array.isArray(rawItems) ? rawItems : [])
+    .map((it) => ({
+      productId: it.productId || it.id,
+      size: it.size || 'US 9.5',
+      colorway: it.colorway || 'Standard',
+      quantity: Math.max(1, parseInt(it.quantity ?? it.qty ?? 1, 10)),
+    }))
+    .filter((it) => Boolean(it.productId))
+
+  if (userId) {
+    await Cart.findOneAndUpdate(
+      { userId },
+      { userId, items: normalizedItems },
+      { upsert: true, new: true }
+    )
+  }
+
+  const enriched = await enrichCartItems(normalizedItems, shippingMethod)
+
+  res.json({
+    success: true,
+    data: {
+      ...enriched,
+      rawItems: normalizedItems.map((it) => ({
+        productId: it.productId,
+        size: it.size,
+        colorway: it.colorway,
+        qty: it.quantity,
+      })),
+    },
+  })
+})
+
+/**
+ * DELETE /api/cart
+ * Clear user cart from MongoDB
+ */
+export const clearUserCart = asyncHandler(async (req, res) => {
+  const userId = req.user?.id || req.user?._id
+  if (userId) {
+    await Cart.findOneAndUpdate({ userId }, { items: [] })
+  }
+
+  res.json({
+    success: true,
+    message: 'User cart cleared successfully',
   })
 })

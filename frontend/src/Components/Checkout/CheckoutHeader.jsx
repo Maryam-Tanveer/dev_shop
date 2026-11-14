@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 export default function CheckoutHeader({
-  currentStep = 1,
+  currentStep: _currentStep = 1,
   onNavigate
 }) {
   return (

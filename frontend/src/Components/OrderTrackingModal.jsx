@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { ShieldCheck, Truck, CheckCircle2, Clock, MapPin, Printer, X, ExternalLink } from 'lucide-react'
+import { ShieldCheck, CheckCircle2, MapPin, Printer, X } from 'lucide-react'
 
 export default function OrderTrackingModal({ order, isOpen, onClose }) {
   if (!isOpen || !order) return null
