@@ -301,8 +301,8 @@ export default function AuthCard({
               <label className="text-xs font-bold text-neutral-800">
                 Email Address
               </label>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#b45309]">
-                DROP ALERTS VIP
+              <span className="text-[11px] font-medium text-neutral-400">
+                Required
               </span>
             </div>
 
@@ -387,9 +387,6 @@ export default function AuthCard({
               <label className="text-xs font-bold text-neutral-800">
                 Email Address
               </label>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400">
-                DROP ALERTS VIP
-              </span>
             </div>
 
             <div className="relative flex items-center bg-[#f4f4f4] hover:bg-[#ededed] focus-within:bg-white border border-transparent focus-within:border-neutral-300 rounded-xl transition">

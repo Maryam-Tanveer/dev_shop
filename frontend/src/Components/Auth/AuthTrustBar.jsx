@@ -4,18 +4,18 @@ export default function AuthTrustBar() {
   const items = [
     {
       icon: ShieldCheck,
-      title: '100% Authenticity Verified',
-      description: 'Physical sneaker inspection protocol on every drop.'
+      title: '100% Authentic Products',
+      description: 'Every product verified authentic and quality checked.'
     },
     {
       icon: Shield,
-      title: 'Vault Tier Encryption',
-      description: 'End-to-end tokenized payment and release security.'
+      title: 'Bank-Grade Security',
+      description: 'End-to-end encrypted checkout and secure transactions.'
     },
     {
       icon: Bell,
-      title: 'Zero-Latency Drop Alert',
-      description: 'Instant push access for members on limited drops.'
+      title: 'Instant Order Updates',
+      description: 'Live notifications and fast tracking for all your orders.'
     }
   ]
 
