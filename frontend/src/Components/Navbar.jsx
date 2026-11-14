@@ -144,7 +144,7 @@ export default function Navbar({
       <div className="bg-[#121212] text-neutral-300 text-[11px] font-semibold border-b border-neutral-800">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-2.5 flex items-center justify-between">
           {/* Navigation Links */}
-          <nav aria-label="Main navigation" className="flex items-center gap-6 sm:gap-7 tracking-wider uppercase overflow-x-auto no-scrollbar">
+          <nav aria-label="Main navigation" className="flex items-center gap-6 sm:gap-7 tracking-wider uppercase overflow-x-auto overflow-y-hidden no-scrollbar">
             {navLinks.map((item) => {
               const routePath = ROUTE_MAP[item] || `/${item.toLowerCase()}`
               const isActive = activeNav ? activeNav === item : (item === 'HOME' ? location.pathname === '/' : location.pathname.startsWith(routePath))
@@ -153,9 +153,9 @@ export default function Navbar({
                   key={item}
                   to={routePath}
                   onClick={() => onNavClick && onNavClick(item)}
-                  className={`transition-colors whitespace-nowrap relative py-0.5 ${
+                  className={`transition-colors whitespace-nowrap relative py-1 ${
                     isActive
-                      ? 'text-[#c81d25] font-extrabold after:absolute after:bottom-[-9px] after:left-0 after:right-0 after:h-[2px] after:bg-[#c81d25]'
+                      ? 'text-[#c81d25] font-extrabold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#c81d25]'
                       : 'text-neutral-400 hover:text-white'
                   }`}
                 >

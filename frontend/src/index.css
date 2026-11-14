@@ -30,6 +30,17 @@ html {
   background: #b3aca0;
 }
 
+/* Utility to hide scrollbars while keeping smooth touch/scroll functional */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+}
+
 /* Dual Range Slider Styles */
 .dev-range-slider {
   pointer-events: none;
