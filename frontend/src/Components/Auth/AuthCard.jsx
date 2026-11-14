@@ -273,14 +273,9 @@ export default function AuthCard({
         <form onSubmit={handleSignUpSubmit} className="space-y-4">
           {/* Full Name */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-neutral-800">
-                Full Name
-              </label>
-              <span className="text-[11px] font-medium text-neutral-400">
-                Required
-              </span>
-            </div>
+            <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+              Full Name
+            </label>
 
             <div className="relative flex items-center bg-[#f4f4f4] hover:bg-[#ededed] focus-within:bg-white border border-transparent focus-within:border-neutral-300 rounded-xl transition">
               <User className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
@@ -297,14 +292,9 @@ export default function AuthCard({
 
           {/* Email Address */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-neutral-800">
-                Email Address
-              </label>
-              <span className="text-[11px] font-medium text-neutral-400">
-                Required
-              </span>
-            </div>
+            <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+              Email Address
+            </label>
 
             <div className="relative flex items-center bg-[#f4f4f4] hover:bg-[#ededed] focus-within:bg-white border border-transparent focus-within:border-neutral-300 rounded-xl transition">
               <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
@@ -321,14 +311,9 @@ export default function AuthCard({
 
           {/* Password */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-neutral-800">
-                Password
-              </label>
-              <span className="text-[11px] font-medium text-neutral-400">
-                Min 6 chars
-              </span>
-            </div>
+            <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+              Password
+            </label>
 
             <div className="relative flex items-center bg-[#f4f4f4] hover:bg-[#ededed] focus-within:bg-white border border-transparent focus-within:border-neutral-300 rounded-xl transition">
               <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
@@ -374,7 +359,7 @@ export default function AuthCard({
             disabled={isSubmitting}
             className="w-full py-3.5 px-6 rounded-full bg-[#c81d25] hover:bg-[#a8161d] text-white text-xs font-bold uppercase tracking-wider transition shadow-md active:scale-95 flex items-center justify-center gap-2 mt-3 disabled:opacity-70 cursor-pointer"
           >
-            <span>{isSubmitting ? 'Creating Vault Pass...' : 'Create Account'}</span>
+            <span>{isSubmitting ? 'Creating Account...' : 'Create Account'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
@@ -383,11 +368,9 @@ export default function AuthCard({
         <form onSubmit={handleSignInSubmit} className="space-y-4">
           {/* Email Address */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-neutral-800">
-                Email Address
-              </label>
-            </div>
+            <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+              Email Address
+            </label>
 
             <div className="relative flex items-center bg-[#f4f4f4] hover:bg-[#ededed] focus-within:bg-white border border-transparent focus-within:border-neutral-300 rounded-xl transition">
               <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
@@ -404,11 +387,9 @@ export default function AuthCard({
 
           {/* Password */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-neutral-800">
-                Password
-              </label>
-            </div>
+            <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+              Password
+            </label>
 
             <div className="relative flex items-center bg-[#f4f4f4] hover:bg-[#ededed] focus-within:bg-white border border-transparent focus-within:border-neutral-300 rounded-xl transition">
               <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 pointer-events-none" />
