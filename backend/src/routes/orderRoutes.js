@@ -29,8 +29,8 @@ router.get('/me', requireAuth, getMyOrders)
 // POST /api/orders - Place order (associates user if token is present)
 router.post('/', optionalAuth, validate(createOrderSchema), createOrder)
 
-// GET /api/orders/:id - Authenticated users can only view their own order; Admins can view any order
-router.get('/:id', requireAuth, validate(orderIdParamSchema), getOrderById)
+// GET /api/orders/:id - Anyone with matching orderNumber or authenticated owner/admin can view
+router.get('/:id', optionalAuth, validate(orderIdParamSchema), getOrderById)
 
 // PATCH /api/orders/:id - Admin updates order status/tracking/carrier
 router.patch('/:id', requireAdmin, updateOrder)

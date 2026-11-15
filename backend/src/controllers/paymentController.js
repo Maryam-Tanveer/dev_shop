@@ -7,6 +7,7 @@ import { sendOrderReceiptEmail } from '../services/emailService.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 import { calcTotals } from '../utils/pricing.js'
+import { IN_MEMORY_ORDERS } from './orderController.js'
 
 /**
  * Decrement inventory stock count and update stockStatus for purchased items
@@ -119,13 +120,22 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
     createdAt: new Date().toISOString(),
   }
 
-  // 2. Persist Order directly to MongoDB
-  const created = await Order.create(newOrderData)
-  const savedOrder = created.toObject ? created.toObject() : created
+  // 2. Persist Order directly to MongoDB with fallback
+  let savedOrder = null
+  try {
+    const created = await Order.create(newOrderData)
+    savedOrder = created.toObject ? created.toObject() : created
+  } catch (err) {
+    console.warn('[Stripe Order.create DB fallback]:', err.message)
+    savedOrder = {
+      _id: `ord_${Date.now()}`,
+      ...newOrderData,
+    }
+  }
 
   // 3. Initialize Stripe Checkout Session
   const stripe = getStripe()
-  const frontendUrl = (process.env.FRONTEND_URL || 'https://dev-shop-bay.vercel.app').replace(/\/+$/, '')
+  const frontendUrl = (req.get('origin') || process.env.FRONTEND_URL || 'https://dev-shop-bay.vercel.app').replace(/\/+$/, '')
 
   const lineItems = sanitizedItems.map((item) => ({
     price_data: {
@@ -178,6 +188,13 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
     await Order.findByIdAndUpdate(savedOrder._id, { stripeSessionId: session.id }).catch(() => {})
   }
   savedOrder.stripeSessionId = session.id
+
+  // Keep in-memory cache synchronized
+  IN_MEMORY_ORDERS.set(orderNumber, savedOrder)
+  if (savedOrder._id) {
+    IN_MEMORY_ORDERS.set(String(savedOrder._id), savedOrder)
+  }
+  IN_MEMORY_ORDERS.set(session.id, savedOrder)
 
   res.status(200).json({
     success: true,
@@ -324,12 +341,21 @@ export const verifySession = asyncHandler(async (req, res, next) => {
   }
 
   const orderNumber = session.metadata?.orderNumber
-  const order = await Order.findOne({
-    $or: [
-      ...(orderNumber ? [{ orderNumber }] : []),
-      { stripeSessionId: sessionId },
-    ],
-  })
+  let order = null
+  try {
+    order = await Order.findOne({
+      $or: [
+        ...(orderNumber ? [{ orderNumber }] : []),
+        { stripeSessionId: sessionId },
+      ],
+    })
+  } catch (err) {
+    console.warn('[verifySession DB lookup error]:', err.message)
+  }
+
+  if (!order) {
+    order = (orderNumber && IN_MEMORY_ORDERS.get(orderNumber)) || IN_MEMORY_ORDERS.get(sessionId)
+  }
 
   if (!order) {
     return next(new AppError('Order not found for verified session', 404))

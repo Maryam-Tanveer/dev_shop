@@ -81,7 +81,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
 
   // Calculations matching cart content
   const shippingCost = items.length > 0 ? (shippingMethod === 'priority' ? 25.00 : 0.00) : 0.00
-  const subtotal = items.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0)
+  const subtotal = items.reduce((acc, item) => acc + (Number(item.price) || 0) * (item.quantity || 1), 0)
   const tax = Number((subtotal * 0.08).toFixed(2))
   const totalAmount = Number((subtotal + shippingCost + tax).toFixed(2))
 
@@ -101,31 +101,57 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
 
   const handlePlaceOrder = async (paymentDetails = {}) => {
     if (items.length === 0) {
-      showToast('Your bag is empty! Add products before placing an order.')
+      showToast('Your bag is empty! Please add products before checking out.')
       return
     }
 
-    const resolvedAddress = shippingAddress.streetAddress || shippingAddress.address || 'Delivery Hub'
-    const resolvedCity = shippingAddress.city || 'Chak Jhumra'
-    const resolvedZip = shippingAddress.postalCode || shippingAddress.zipCode || '38000'
+    const email = (contactInfo.email || currentUser?.email || '').trim()
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email || !emailRegex.test(email)) {
+      showToast('Please enter a valid email address for order confirmation.')
+      return
+    }
+
+    const firstName = (shippingAddress.firstName || currentUser?.name?.split(' ')[0] || '').trim()
+    const lastName = (shippingAddress.lastName || currentUser?.name?.split(' ')[1] || '').trim()
+    const resolvedAddress = (shippingAddress.streetAddress || shippingAddress.address || '').trim()
+    const resolvedCity = (shippingAddress.city || '').trim()
+    const resolvedState = (shippingAddress.state || 'Punjab').trim()
+    const resolvedZip = (shippingAddress.postalCode || shippingAddress.zipCode || '38000').trim()
+    const resolvedCountry = (shippingAddress.country || 'Pakistan').trim()
+
+    if (!firstName) {
+      showToast('Please enter your First Name for delivery.')
+      return
+    }
+
+    if (!resolvedAddress) {
+      showToast('Please enter your Street Address.')
+      return
+    }
+
+    if (!resolvedCity) {
+      showToast('Please enter your City.')
+      return
+    }
 
     const checkoutPayload = {
-      email: contactInfo.email || currentUser?.email || 'collector@devshop.io',
+      email,
       items: items.map((it) => ({
         productId: String(it.productId || it.id || 'deal-1'),
-        quantity: it.quantity || 1,
+        quantity: Math.max(1, parseInt(it.quantity || it.qty || 1, 10)),
         size: it.size || 'Standard',
         colorway: it.colorway || it.color || 'Default',
       })),
       shippingAddress: {
-        firstName: shippingAddress.firstName || currentUser?.name?.split(' ')[0] || 'Collector',
-        lastName: shippingAddress.lastName || currentUser?.name?.split(' ')[1] || 'Member',
+        firstName,
+        lastName,
         address: resolvedAddress,
         apartment: shippingAddress.apartment || '',
         city: resolvedCity,
-        state: shippingAddress.state || 'Punjab',
+        state: resolvedState,
         zipCode: resolvedZip,
-        country: shippingAddress.country || 'Pakistan',
+        country: resolvedCountry,
       },
       shippingMethod,
     }
@@ -163,12 +189,22 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
         const createdOrder = res?.data || res?.order || res
         if (createdOrder && (createdOrder.orderNumber || createdOrder._id)) {
           clearCart()
+          const orderNum = createdOrder.orderNumber || createdOrder._id
+          try {
+            sessionStorage.setItem(
+              'devshop_last_order',
+              JSON.stringify({
+                ...createdOrder,
+                paymentMethod: 'Cash on Delivery',
+              })
+            )
+          } catch {}
           showToast('Order confirmed! Generating manifest...')
           setTimeout(() => {
             if (onNavigate) {
               onNavigate('ORDER_CONFIRMATION')
             } else {
-              navigate('/order-confirmation', {
+              navigate(`/order-confirmation?order_id=${encodeURIComponent(orderNum)}`, {
                 state: {
                   order: {
                     ...createdOrder,
@@ -296,6 +332,27 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
 
         {/* 2-Column Main Section */}
         <div className="max-w-[1400px] mx-auto px-4 sm:px-8 w-full">
+          {items.length === 0 && (
+            <div className="mb-6 p-5 sm:p-6 rounded-3xl bg-neutral-900 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+              <div>
+                <h4 className="text-sm sm:text-base font-black tracking-tight text-white mb-1">
+                  Your bag is currently empty
+                </h4>
+                <p className="text-xs text-neutral-400">
+                  Select your desired kicks, apparel, or collectibles from our catalog before checking out.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => (onNavigate ? onNavigate('PRODUCTS') : navigate('/products'))}
+                className="bg-[#c81d25] hover:bg-[#a8161d] text-white text-xs font-bold px-6 py-3 rounded-full flex items-center gap-2 shadow-sm transition whitespace-nowrap cursor-pointer"
+              >
+                <span>Browse Drops</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left 7 Columns: Form details (Contact, Shipping Address, Shipping Method) */}
             <div className="lg:col-span-7 space-y-6">

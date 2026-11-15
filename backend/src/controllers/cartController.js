@@ -2,6 +2,7 @@ import Product from '../models/Product.js'
 import Cart from '../models/Cart.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { calcTotals } from '../utils/pricing.js'
+import { PRODUCTS_DATABASE, RAW_DATABASE } from '../data/products/index.js'
 
 /**
  * Authoritative product lookup from MongoDB with seamless master database fallback
@@ -37,6 +38,30 @@ export const getAuthoritativeProduct = async (id) => {
     }
   } catch (err) {
     console.warn('[DB Product Lookup]:', err.message)
+  }
+
+  // Master fallback if DB is not connected or item is not in DB yet
+  const fallback = PRODUCTS_DATABASE[cleanId] || RAW_DATABASE[cleanId]
+  if (fallback) {
+    return {
+      id: fallback.id,
+      title: fallback.title,
+      fullTitle: fallback.fullTitle || fallback.title,
+      price: Number(fallback.price) || 0,
+      originalPrice: fallback.originalPrice ? Number(fallback.originalPrice) : null,
+      image: fallback.image || fallback.thumbnails?.[0]?.image || '',
+      brand: fallback.brand || 'Dev Shop',
+      category: fallback.category || 'Sneakers',
+      colorways: (fallback.colorways || []).map((c) => ({
+        name: c.name,
+        color: c.color || c.hex,
+        image: fallback.image,
+      })),
+      badge: fallback.badge || 'CERTIFIED',
+      badgeColor: 'bg-neutral-900 text-white',
+      condition: 'Deadstock Authentic',
+      tag: 'Vault Certified',
+    }
   }
 
   return null

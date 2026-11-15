@@ -7,7 +7,7 @@ export default function OrderBreakdownCard({
   onEditBag,
 }) {
   // Subtotal & Exact Breakdown matching items in cart
-  const subtotal = items.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0)
+  const subtotal = items.reduce((acc, item) => acc + (Number(item.price) || 0) * (item.quantity || 1), 0)
   const tax = Number((subtotal * taxRate).toFixed(2))
   const total = Number((subtotal + shippingCost + tax).toFixed(2))
 
@@ -68,7 +68,7 @@ export default function OrderBreakdownCard({
             {/* Price */}
             <div className="text-right flex-shrink-0">
               <span className="text-sm sm:text-base font-black text-[#c81d25]">
-                ${item.price.toFixed(2)}
+                ${(Number(item.price) || 0).toFixed(2)}
               </span>
             </div>
           </div>

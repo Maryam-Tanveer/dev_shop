@@ -24,7 +24,14 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
   const [toast, setToast] = useState(null)
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false)
 
-  const [activeOrder, setActiveOrder] = useState(location.state?.order || null)
+  const [activeOrder, setActiveOrder] = useState(() => {
+    if (location.state?.order) return location.state.order
+    try {
+      const saved = sessionStorage.getItem('devshop_last_order')
+      if (saved) return JSON.parse(saved)
+    } catch {}
+    return null
+  })
   const [isVerifying, setIsVerifying] = useState(
     Boolean(new URLSearchParams(location.search).get('session_id'))
   )
@@ -32,6 +39,8 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const sessionId = params.get('session_id')
+    const orderId = params.get('order_id') || params.get('order_number') || params.get('id')
+
     if (sessionId) {
       setIsVerifying(true)
       api
@@ -39,6 +48,9 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
         .then((res) => {
           if (res.success && res.order) {
             setActiveOrder(res.order)
+            try {
+              sessionStorage.setItem('devshop_last_order', JSON.stringify(res.order))
+            } catch {}
             clearCart()
             showToast('Stripe payment confirmed! Receipt dispatched.')
           }
@@ -50,6 +62,28 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
         .finally(() => {
           setIsVerifying(false)
         })
+    } else if (orderId) {
+      if (!activeOrder || (activeOrder.orderNumber !== orderId && activeOrder._id !== orderId)) {
+        setIsVerifying(true)
+        api
+          .getOrderById(orderId)
+          .then((res) => {
+            const ord = res?.data || res?.order || res
+            if (ord) {
+              setActiveOrder(ord)
+              try {
+                sessionStorage.setItem('devshop_last_order', JSON.stringify(ord))
+              } catch {}
+              clearCart()
+            }
+          })
+          .catch((err) => {
+            console.warn('[Fetch order error]:', err.message)
+          })
+          .finally(() => {
+            setIsVerifying(false)
+          })
+      }
     }
   }, [location.search])
 
@@ -151,11 +185,15 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-8 w-full pt-2">
             {/* Hero Confirmation Card */}
             <OrderHeroConfirmation
-              orderNumber={activeOrder.orderNumber || 'DEV-VAULT'}
+              orderNumber={activeOrder.orderNumber || (activeOrder._id ? `DEV-${String(activeOrder._id).slice(-8).toUpperCase()}` : 'DEV-VAULT')}
               customerName={activeOrder.shippingAddress?.firstName || 'Collector'}
-              estDelivery="Oct 28 – Oct 30"
-              trackingNumber={`DEV-EXP-${(activeOrder.orderNumber || 'VAULT').replace(/[^0-9]/g, '')}`}
-              paymentMethod={activeOrder.paymentMethod || 'Stripe Authenticated Checkout'}
+              estDelivery={activeOrder.estimatedDelivery || (activeOrder.shippingMethod === 'priority' ? 'Tomorrow by 12:00 PM' : '2-4 Business Days')}
+              trackingNumber={activeOrder.trackingNumber || activeOrder.carrier || `DEV-EXP-${(activeOrder.orderNumber || 'VAULT').replace(/[^a-zA-Z0-9]/g, '')}`}
+              paymentMethod={
+                activeOrder.paymentMethod === 'cod' || activeOrder.paymentMethod === 'cash-on-delivery'
+                  ? 'Cash on Delivery'
+                  : 'Stripe Authenticated Checkout'
+              }
             />
 
             {/* 2-Column Content Layout */}

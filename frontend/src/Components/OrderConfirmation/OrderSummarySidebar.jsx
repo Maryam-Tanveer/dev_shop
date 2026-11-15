@@ -15,7 +15,7 @@ export default function OrderSummarySidebar({
     ? Number(order.subtotal)
     : (items.length > 0
         ? items.reduce((sum, it) => sum + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0)
-        : 959.95)
+        : 0)
 
   const shippingCost = order?.shippingCost !== undefined ? Number(order.shippingCost) : 0
   const tax = order?.tax !== undefined ? Number(order.tax) : Number((subtotal * 0.08).toFixed(2))
