@@ -167,8 +167,8 @@ export const createOrder = asyncHandler(async (req, res, next) => {
   const orderNumber = `DEV-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 
   const isCod = paymentMethod === 'cod' || paymentMethod === 'cash-on-delivery'
-  const initialStatus = isCod ? 'Confirmed' : 'Pending'
-  const initialPaymentStatus = isCod ? 'unpaid' : 'unpaid'
+  const initialStatus = 'Confirmed'
+  const initialPaymentStatus = isCod ? 'unpaid' : 'paid'
 
   const newOrderData = {
     orderNumber,
@@ -177,13 +177,14 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     items: sanitizedItems,
     shippingAddress,
     shippingMethod: (shippingMethod || 'standard').toLowerCase(),
-    paymentMethod: paymentMethod || 'stripe-card',
+    paymentMethod: paymentMethod || 'credit-card',
     subtotal: Number(subtotal.toFixed(2)),
     shippingCost,
     tax,
     totalAmount,
     status: initialStatus,
     paymentStatus: initialPaymentStatus,
+    trackingNumber: `DEV-EXP-${orderNumber.replace(/[^A-Z0-9]/g, '')}`,
     carrier: (shippingMethod || '').toLowerCase() === 'priority' ? 'FedEx Priority Air' : 'Standard Authenticated Courier',
     estimatedDelivery: (shippingMethod || '').toLowerCase() === 'priority' ? 'Tomorrow by 12:00 PM' : '2-4 Business Days',
     statusHistory: [

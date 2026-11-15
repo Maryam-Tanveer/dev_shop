@@ -32,6 +32,12 @@ export const createOrderSchema = {
     }).optional(),
     shippingMethod: Joi.string().valid('standard', 'priority').default('standard'),
     paymentMethod: Joi.string().default('credit-card'),
+    cardDetails: Joi.object({
+      cardLast4: Joi.string().allow('', null).optional(),
+      cardBrand: Joi.string().allow('', null).optional(),
+      name: Joi.string().allow('', null).optional(),
+      exp: Joi.string().allow('', null).optional(),
+    }).allow(null).optional(),
   }),
 }
 
