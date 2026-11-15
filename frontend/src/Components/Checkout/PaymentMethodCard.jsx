@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   CreditCard,
-  Wallet,
   Lock,
   ShieldCheck,
   CheckCircle2,
@@ -15,7 +14,7 @@ export default function PaymentMethodCard({
   onPlaceOrder,
   isProcessing = false,
 }) {
-  const [paymentType, setPaymentType] = useState('card') // 'card' | 'digital' | 'cod'
+  const [paymentType, setPaymentType] = useState('card') // 'card' | 'cod'
   const [cardError, setCardError] = useState('')
 
   // Card details state
@@ -332,45 +331,7 @@ export default function PaymentMethodCard({
           )}
         </div>
 
-        {/* Option 2: Digital Fast Pay (Apple Pay / Google Pay) */}
-        <div
-          onClick={() => {
-            setPaymentType('digital')
-            if (cardError) setCardError('')
-          }}
-          className={`p-4 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
-            paymentType === 'digital'
-              ? 'border-[#c81d25] bg-rose-50/10 shadow-xs'
-              : 'border-neutral-200 bg-white hover:border-neutral-300'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-4 h-4 rounded-full flex items-center justify-center transition border ${
-                paymentType === 'digital'
-                  ? 'border-[#c81d25] bg-[#c81d25]'
-                  : 'border-neutral-300 bg-white'
-              }`}
-            >
-              {paymentType === 'digital' && (
-                <div className="w-1.5 h-1.5 rounded-full bg-white" />
-              )}
-            </div>
-
-            <div>
-              <span className="text-xs sm:text-sm font-bold text-neutral-900 block leading-tight">
-                Digital Wallet (1-Click)
-              </span>
-              <span className="text-[10px] text-neutral-500 font-medium">
-                Apple Pay / Google Pay / Vault Link
-              </span>
-            </div>
-          </div>
-
-          <Wallet className="w-4 h-4 text-neutral-600" />
-        </div>
-
-        {/* Option 3: Cash On Delivery (COD) */}
+        {/* Option 2: Cash On Delivery (COD) */}
         <div
           onClick={() => {
             setPaymentType('cod')
@@ -421,8 +382,6 @@ export default function PaymentMethodCard({
             ? 'Processing Secure Order...'
             : paymentType === 'cod'
             ? `Confirm Order (COD) • $${totalAmount.toFixed(2)}`
-            : paymentType === 'digital'
-            ? `Pay with Digital Wallet • $${totalAmount.toFixed(2)}`
             : `Pay with Card • $${totalAmount.toFixed(2)}`}
         </span>
         <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />

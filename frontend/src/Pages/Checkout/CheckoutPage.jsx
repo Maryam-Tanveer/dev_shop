@@ -157,18 +157,14 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     }
 
     const isCod = paymentDetails?.paymentType === 'cod'
-    const isCard = paymentDetails?.paymentType === 'card'
-    const isDigital = paymentDetails?.paymentType === 'digital'
 
     setIsProcessing(true)
 
     const paymentLabel = isCod
       ? 'Cash on Delivery'
-      : isDigital
-      ? 'Digital Fast Pay (Apple Pay / Google Pay)'
       : `Credit/Debit Card (${paymentDetails?.cardDetails?.cardBrand || 'Card'} •••• ${paymentDetails?.cardDetails?.cardLast4 || '4242'})`
 
-    const paymentMethodApi = isCod ? 'cod' : isDigital ? 'digital' : 'credit-card'
+    const paymentMethodApi = isCod ? 'cod' : 'credit-card'
 
     showToast(isCod ? 'Authorizing COD drop dispatch...' : 'Processing encrypted card terminal payment...')
 
