@@ -113,12 +113,26 @@ export default function CatalogSidebarFilters({
         </h3>
         <div className="flex flex-wrap gap-2">
           {COLLECTIONS.map((col) => {
-            const isSelected = selectedCollection === col
+            const normSelected = String(selectedCollection || 'All').toLowerCase().trim()
+            const normCol = String(col).toLowerCase().trim()
+            const isSelected =
+              normSelected === normCol ||
+              (normSelected === 'all' && normCol === 'all') ||
+              (normSelected === 'clothing' && normCol === 'dress & clothing') ||
+              (normSelected === 'apparel & hoodies' && normCol === 'dress & clothing') ||
+              (normSelected === 'collabs' && normCol === 'exclusive collabs')
+
             return (
               <button
                 key={col}
                 type="button"
-                onClick={() => onSelectCollection && onSelectCollection(col)}
+                onClick={() => {
+                  if (isSelected && col !== 'All') {
+                    onSelectCollection && onSelectCollection('All')
+                  } else {
+                    onSelectCollection && onSelectCollection(col)
+                  }
+                }}
                 className={`text-xs font-bold px-3.5 py-1.5 rounded-full transition shadow-2xs cursor-pointer ${
                   isSelected
                     ? 'bg-[#c81d25] text-white shadow-xs'

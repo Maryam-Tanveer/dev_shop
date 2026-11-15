@@ -3,6 +3,15 @@ import { ArrowUpRight, ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
 import { COLLECTIONS_DATA as FALLBACK_DATA } from '../../data/collections'
 
+const CATEGORY_ALIASES = {
+  'retro-basketball': 'shoes',
+  'y2k-runners': 'shoes',
+  'streetwear-essentials': 'clothing',
+  'vault-collabs': 'collabs',
+  'technical-outerwear': 'outerwear',
+  'limited-drops-care': 'accessories',
+}
+
 export default function CollectionsGrid({
   activeFilter = 'all',
   onSelectCollection
@@ -22,14 +31,15 @@ export default function CollectionsGrid({
         console.error('Failed to load collections from API:', err)
       })
 
-    return () => {                                                                                                                                                                                                                                                                                                                                                                                                        
+    return () => {
       isMounted = false
     }
   }, [])
 
-  const displayedCollections = activeFilter === 'all'
+  const resolvedFilter = CATEGORY_ALIASES[activeFilter] || activeFilter
+  const displayedCollections = resolvedFilter === 'all'
     ? collections
-    : collections.filter((col) => col.category === activeFilter)
+    : collections.filter((col) => col.category === resolvedFilter || col.id === resolvedFilter)
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-4 w-full">

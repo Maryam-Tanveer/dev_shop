@@ -9,6 +9,7 @@ import CollectionsSection from '../../Components/Landing/CollectionsSection'
 import BlogSection from '../../Components/Landing/BlogSection'
 import TrustSection from '../../Components/Landing/TrustSection'
 import { useCart } from '../../context/CartContext'
+import { useWishlist } from '../../context/WishlistContext'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 
 export default function LandingPage({ onNavigate, onSelectProduct }) {
@@ -23,7 +24,7 @@ export default function LandingPage({ onNavigate, onSelectProduct }) {
     closeDrawer,
   } = useCart()
 
-  const [wishlist, setWishlist] = useState({ 'deal-1': true })
+  const { wishlistMap, wishlistCount, toggleWishlist } = useWishlist()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('HOME')
   const [toast, setToast] = useState(null)
@@ -42,12 +43,9 @@ export default function LandingPage({ onNavigate, onSelectProduct }) {
     removeFromCart(id)
   }
 
-  const handleToggleWishlist = (id) => {
-    setWishlist((prev) => {
-      const next = { ...prev, [id]: !prev[id] }
-      showToast(next[id] ? 'Added to Wishlist' : 'Removed from Wishlist')
-      return next
-    })
+  const handleToggleWishlist = async (productOrId) => {
+    const isAdded = await toggleWishlist(productOrId)
+    showToast(isAdded ? 'Added to Wishlist' : 'Removed from Wishlist')
   }
 
   const handleNavClick = (navItem) => {
@@ -97,7 +95,7 @@ export default function LandingPage({ onNavigate, onSelectProduct }) {
       <Navbar
         cartCount={cartCount}
         onOpenCart={openDrawer}
-        wishlistCount={Object.values(wishlist).filter(Boolean).length}
+        wishlistCount={wishlistCount}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav={activeNav}
@@ -110,13 +108,20 @@ export default function LandingPage({ onNavigate, onSelectProduct }) {
         <HeroSection
           onAddToCart={handleAddToCart}
           onSelectProduct={onSelectProduct}
-          onEventDetails={() => showToast('Redirecting to Sneakers Fest ID registration...')}
+          onEventDetails={() => {
+            showToast('Opening Sneakers Fest 50% discount drops...')
+            if (onNavigate) {
+              onNavigate('PRODUCTS')
+            } else {
+              navigate('/products?category=Top%20Best%20Deals')
+            }
+          }}
         />
 
         {/* 5: Top Best Deals Section (4 Cards + Countdown Timer + Quick Add) */}
         <DealsSection
           onAddToCart={handleAddToCart}
-          wishlist={wishlist}
+          wishlist={wishlistMap}
           onToggleWishlist={handleToggleWishlist}
           onSelectProduct={onSelectProduct}
         />
@@ -134,7 +139,9 @@ export default function LandingPage({ onNavigate, onSelectProduct }) {
               return
             }
             showToast(`Exploring ${collection.title}...`)
-            if (onSelectProduct && collection.productId) {
+            if (collection.targetCategory) {
+              navigate(`/products?category=${encodeURIComponent(collection.targetCategory)}`)
+            } else if (onSelectProduct && collection.productId) {
               onSelectProduct(collection.productId)
             } else if (collection.productId) {
               navigate(`/product/${collection.productId}`)

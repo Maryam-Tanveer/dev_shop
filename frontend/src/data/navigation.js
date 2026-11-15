@@ -12,24 +12,24 @@ export const NAV_LINKS = [
 
 export const FOOTER_COLLECTIONS_LINKS = [
   {
-    label: 'New Arrivals',
-    path: '/collections?category=new-arrivals',
+    label: 'Shoes & Sneakers',
+    path: '/collections?category=shoes',
   },
   {
-    label: 'Retro Basketball',
-    path: '/collections?category=retro-basketball',
+    label: 'Bags & Backpacks',
+    path: '/collections?category=bags',
   },
   {
-    label: 'Running & Lifestyle',
-    path: '/collections?category=y2k-runners',
+    label: 'Dress & Clothing',
+    path: '/collections?category=clothing',
+  },
+  {
+    label: 'Technical Outerwear',
+    path: '/collections?category=outerwear',
   },
   {
     label: 'Exclusive Collabs',
-    path: '/collections?category=vault-collabs',
-  },
-  {
-    label: 'Apparel & Hoodies',
-    path: '/collections?category=streetwear-essentials',
+    path: '/collections?category=collabs',
   },
 ]
 

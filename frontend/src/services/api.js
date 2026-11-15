@@ -512,6 +512,16 @@ export const api = {
   },
 
   /**
+   * Admin alias: Update product stock and status
+   */
+  async updateProductStock(id, updates) {
+    return request(`/products/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
+  },
+
+  /**
    * Admin: Delete / archive drop from vault
    */
   async deleteProduct(id) {

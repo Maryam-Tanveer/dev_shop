@@ -12,11 +12,14 @@ import AccountAddresses from '../../Components/Account/AccountAddresses'
 import AccountSidebarWidgets from '../../Components/Account/AccountSidebarWidgets'
 import OrderTrackingModal from '../../Components/OrderTrackingModal'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
+import { useCart } from '../../context/CartContext'
+import { useWishlist } from '../../context/WishlistContext'
 
 export default function DashboardPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
+  const { items: cart, cartCount, removeFromCart, isDrawerOpen, openDrawer, closeDrawer } = useCart()
+  const { wishlistCount } = useWishlist()
   const [activeTab, setActiveTab] = useState('orders')
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [toast, setToast] = useState(null)
   const [trackingOrder, setTrackingOrder] = useState(null)
@@ -50,11 +53,11 @@ export default function DashboardPage({ onNavigate, onSelectProduct }) {
       {/* Cart Drawer */}
       <CartDrawer
         isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        items={[]}
-        onRemoveItem={() => {}}
+        onClose={closeDrawer}
+        items={cart}
+        onRemoveItem={removeFromCart}
         onCheckout={() => {
-          setIsDrawerOpen(false)
+          closeDrawer()
           if (onNavigate) {
             onNavigate('CHECKOUT')
           } else {
@@ -65,7 +68,9 @@ export default function DashboardPage({ onNavigate, onSelectProduct }) {
 
       {/* Navbar */}
       <Navbar
-        onOpenCart={() => setIsDrawerOpen(true)}
+        cartCount={cartCount}
+        onOpenCart={openDrawer}
+        wishlistCount={wishlistCount}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav=""

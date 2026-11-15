@@ -9,6 +9,7 @@ import CollectionsGrid from '../../Components/Collections/CollectionsGrid'
 import CollectionsFeaturedCapsule from '../../Components/Collections/CollectionsFeaturedCapsule'
 import { api } from '../../services/api'
 import { useCart } from '../../context/CartContext'
+import { useWishlist } from '../../context/WishlistContext'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 
 const CATEGORY_MAP = {
@@ -60,6 +61,7 @@ export default function CollectionsPage({ onNavigate, onSelectProduct }) {
     openDrawer,
     closeDrawer,
   } = useCart()
+  const { wishlistCount } = useWishlist()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('COLLECTIONS')
@@ -154,7 +156,7 @@ export default function CollectionsPage({ onNavigate, onSelectProduct }) {
       <Navbar
         cartCount={cartCount}
         onOpenCart={openDrawer}
-        wishlistCount={2}
+        wishlistCount={wishlistCount}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav={activeNav}

@@ -12,13 +12,14 @@ import OrderSummarySidebar from '../../Components/OrderConfirmation/OrderSummary
 import OrderHelpConcierge from '../../Components/OrderConfirmation/OrderHelpConcierge'
 import OrderTrackingModal from '../../Components/OrderTrackingModal'
 import { useCart } from '../../context/CartContext'
+import { useWishlist } from '../../context/WishlistContext'
 import { api } from '../../services/api'
 
 export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { clearCart } = useCart()
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const { items: cart, cartCount, clearCart, removeFromCart, isDrawerOpen, openDrawer, closeDrawer } = useCart()
+  const { wishlistCount } = useWishlist()
   const [searchQuery, setSearchQuery] = useState('')
   const [toast, setToast] = useState(null)
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false)
@@ -78,11 +79,11 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
       {/* Cart Drawer */}
       <CartDrawer
         isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        items={[]}
-        onRemoveItem={() => {}}
+        onClose={closeDrawer}
+        items={cart}
+        onRemoveItem={removeFromCart}
         onCheckout={() => {
-          setIsDrawerOpen(false)
+          closeDrawer()
           if (onNavigate) {
             onNavigate('CHECKOUT')
           } else {
@@ -93,7 +94,9 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
 
       {/* Navbar */}
       <Navbar
-        onOpenCart={() => setIsDrawerOpen(true)}
+        cartCount={cartCount}
+        onOpenCart={openDrawer}
+        wishlistCount={wishlistCount}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav=""

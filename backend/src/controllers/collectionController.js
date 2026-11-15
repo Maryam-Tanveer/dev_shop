@@ -1,11 +1,23 @@
 import Collection from '../models/Collection.js'
+import Product from '../models/Product.js'
 import { COLLECTIONS } from '../data/mockData.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 
+// Mapping category aliases to collection categories
+const CATEGORY_ALIASES = {
+  'retro-basketball': 'shoes',
+  'y2k-runners': 'shoes',
+  'streetwear-essentials': 'clothing',
+  'vault-collabs': 'collabs',
+  'technical-outerwear': 'outerwear',
+  'limited-drops-care': 'accessories',
+}
+
 export const getCollections = asyncHandler(async (req, res) => {
-  const { category } = req.query
-  const query = category && category !== 'all' ? { category } : {}
+  const rawCat = (req.query.category || '').toLowerCase()
+  const resolvedCategory = CATEGORY_ALIASES[rawCat] || rawCat
+  const query = resolvedCategory && resolvedCategory !== 'all' ? { category: resolvedCategory } : {}
   let list = []
 
   try {
@@ -14,16 +26,53 @@ export const getCollections = asyncHandler(async (req, res) => {
     console.warn('[COLLECTIONS DB WARNING]:', err.message)
   }
 
-  // If DB returned old product-level mock data or is empty, use authoritative collections list
+  // Ensure DB returned authentic curated collections (not legacy product cards)
   const hasValidCollections =
     Array.isArray(list) &&
     list.length > 0 &&
-    list.some((c) => c.targetCategory || (typeof c.id === 'string' && c.id.startsWith('col-')))
+    list.some((c) => c.targetCategory) &&
+    !list.some((c) => c.productId)
 
   if (!hasValidCollections) {
-    list = category && category !== 'all'
-      ? COLLECTIONS.filter((col) => col.category === category || col.id === category)
+    list = resolvedCategory && resolvedCategory !== 'all'
+      ? COLLECTIONS.filter((col) => col.category === resolvedCategory || col.id === resolvedCategory)
       : COLLECTIONS
+  }
+
+  // Dynamically compute authoritative product item counts from the database
+  try {
+    list = await Promise.all(
+      list.map(async (col) => {
+        let prodFilter = {}
+        const cat = (col.category || '').toLowerCase()
+
+        if (cat === 'shoes') {
+          prodFilter = { category: /Basketball|Running|Lifestyle|Skate|Trail Tech|Collabs/i }
+        } else if (cat === 'clothing') {
+          prodFilter = { category: /Streetwear|Apparel/i }
+        } else if (cat === 'bags') {
+          prodFilter = { $or: [{ category: /Bags|Packs/i }, { title: /pack|vest|bag|duffle/i }] }
+        } else if (cat === 'outerwear') {
+          prodFilter = { category: /Outerwear/i }
+        } else if (cat === 'accessories') {
+          prodFilter = { category: /Accessories|Vault Editions/i }
+        } else if (cat === 'collabs') {
+          prodFilter = { category: /Collabs/i }
+        }
+
+        const liveCount = await Product.countDocuments(prodFilter).catch(() => 0)
+        const finalCount = liveCount > 0 ? liveCount : col.itemCount || 0
+        const styleLabel = cat === 'shoes' ? 'FOOTWEAR' : cat === 'clothing' ? 'STREETWEAR' : cat === 'bags' ? 'BAGS & PACKS' : cat === 'outerwear' ? 'WEATHERPROOF SHELLS' : cat === 'accessories' ? 'CARE & DISPLAY' : 'EXCLUSIVE DROPS'
+
+        return {
+          ...col,
+          itemCount: finalCount,
+          badge: `${finalCount} STYLES • ${styleLabel}`,
+        }
+      })
+    )
+  } catch (err) {
+    console.warn('[COLLECTIONS COUNT WARNING]:', err.message)
   }
 
   res.json({

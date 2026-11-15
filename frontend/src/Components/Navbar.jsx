@@ -367,7 +367,11 @@ export default function Navbar({
                 onClick={() => onNavClick && onNavClick('ACCOUNT')}
                 aria-label={`View account profile for ${currentUser.name || 'Member'}`}
                 title={`${currentUser.name} (${currentUser.tier || 'Member'})`}
-                className="w-9 h-9 rounded-full overflow-hidden border border-neutral-300 hover:border-[#c81d25] transition cursor-pointer flex-shrink-0 flex items-center justify-center bg-gradient-to-tr from-neutral-900 to-neutral-700 text-white font-extrabold text-[11px] shadow-2xs"
+                className={`w-9 h-9 rounded-full overflow-hidden border transition cursor-pointer flex-shrink-0 flex items-center justify-center bg-gradient-to-tr from-neutral-900 to-neutral-700 text-white font-extrabold text-[11px] shadow-2xs ${
+                  location.pathname === '/account' || activeNav === 'ACCOUNT'
+                    ? 'border-[#c81d25] ring-2 ring-[#c81d25]/40'
+                    : 'border-neutral-300 hover:border-[#c81d25]'
+                }`}
               >
                 {currentUser.avatar ? (
                   <img
@@ -393,7 +397,11 @@ export default function Navbar({
               <Link
                 to="/login"
                 onClick={() => onNavClick && onNavClick('LOGIN')}
-                className="bg-neutral-900 hover:bg-[#c81d25] text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow-2xs cursor-pointer"
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow-2xs cursor-pointer ${
+                  location.pathname === '/login' || activeNav === 'LOGIN'
+                    ? 'bg-[#c81d25] text-white ring-2 ring-[#c81d25]/30'
+                    : 'bg-neutral-900 hover:bg-[#c81d25] text-white'
+                }`}
               >
                 Sign In
               </Link>

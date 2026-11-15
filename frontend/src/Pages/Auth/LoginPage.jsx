@@ -7,18 +7,19 @@ import AuthBreadcrumb from '../../Components/Auth/AuthBreadcrumb'
 import AuthCard from '../../Components/Auth/AuthCard'
 import AuthTrustBar from '../../Components/Auth/AuthTrustBar'
 import { useAuth } from '../../context/AuthContext'
+import { useCart } from '../../context/CartContext'
+import { useWishlist } from '../../context/WishlistContext'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 
 export default function LoginPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAuthenticated, loading } = useAuth()
+  const { items: cart, cartCount, removeFromCart, isDrawerOpen, openDrawer, closeDrawer } = useCart()
+  const { wishlistCount } = useWishlist()
 
-  const [cart, setCart] = useState([])
-  const [isCartOpen, setIsCartOpen] = useState(false)
-  const [wishlist, _setWishlist] = useState({ 'deal-1': true })
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeNav, setActiveNav] = useState('CHECKOUT')
+  const [activeNav, setActiveNav] = useState('LOGIN')
   const [toast, setToast] = useState(null)
 
   const redirectTarget = location.state?.from?.pathname || '/account'
@@ -81,21 +82,26 @@ export default function LoginPage({ onNavigate, onSelectProduct }) {
 
       {/* Cart Drawer */}
       <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
+        isOpen={isDrawerOpen}
+        onClose={closeDrawer}
         items={cart}
-        onRemoveItem={(id) => setCart((prev) => prev.filter((item, idx) => (item.cartItemId || idx) !== id))}
+        onRemoveItem={removeFromCart}
         onCheckout={() => {
           showToast('Proceeding to checkout...')
-          setIsCartOpen(false)
+          closeDrawer()
+          if (onNavigate) {
+            onNavigate('CHECKOUT')
+          } else {
+            navigate('/checkout')
+          }
         }}
       />
 
       {/* Navbar */}
       <Navbar
-        cartCount={cart.length}
-        onOpenCart={() => setIsCartOpen(true)}
-        wishlistCount={Object.values(wishlist).filter(Boolean).length}
+        cartCount={cartCount}
+        onOpenCart={openDrawer}
+        wishlistCount={wishlistCount}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav={activeNav}

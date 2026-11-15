@@ -99,7 +99,7 @@ export default function DealsSection({ onAddToCart, wishlist = {}, onToggleWishl
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      onToggleWishlist && onToggleWishlist(product.id)
+                      onToggleWishlist && onToggleWishlist(product)
                     }}
                     className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-[#c81d25] transition"
                     title="Add to wishlist"

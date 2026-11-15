@@ -30,7 +30,9 @@ export default function CollectionsSection({ onSelectCollection }) {
       onSelectCollection(col)
       return
     }
-    if (col?.productId) {
+    if (col?.targetCategory) {
+      navigate(`/products?category=${encodeURIComponent(col.targetCategory)}`)
+    } else if (col?.productId) {
       navigate(`/product/${col.productId}`)
     } else {
       navigate('/collections')
@@ -62,7 +64,7 @@ export default function CollectionsSection({ onSelectCollection }) {
 
       {/* 4 Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {collections.map((col) => (
+        {collections.slice(0, 4).map((col) => (
           <div
             key={col.id}
             onClick={() => handleSelect(col)}
@@ -80,7 +82,7 @@ export default function CollectionsSection({ onSelectCollection }) {
 
             {/* Top Row: Badge & Arrow Circle */}
             <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10">
-              <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-xs ${col.badgeClass}`}>
+              <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-xs ${col.badgeClass || 'bg-white/20 text-white backdrop-blur-md border border-white/20'}`}>
                 {col.badge}
               </span>
 
@@ -95,7 +97,7 @@ export default function CollectionsSection({ onSelectCollection }) {
                 {col.title}
               </h3>
               <p className="text-xs text-white/80 line-clamp-2 leading-relaxed">
-                {col.subtitle}
+                {col.subtitle || col.description || col.subTag}
               </p>
             </div>
           </div>

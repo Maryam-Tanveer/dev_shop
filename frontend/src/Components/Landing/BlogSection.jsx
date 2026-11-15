@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
+import { FALLBACK_BLOGS } from '../../data/blog'
 
 export default function BlogSection({ onReadPost }) {
-  const [posts, setPosts] = useState([])
+  const [posts, setPosts] = useState(FALLBACK_BLOGS.slice(0, 3))
 
   useEffect(() => {
     let isMounted = true
@@ -11,7 +12,7 @@ export default function BlogSection({ onReadPost }) {
       .getFeaturedBlogs()
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
-          setPosts(data)
+          setPosts(data.slice(0, 3))
         }
       })
       .catch((err) => {
@@ -49,7 +50,10 @@ export default function BlogSection({ onReadPost }) {
           >
             <div>
               {/* Image Frame */}
-              <div className="relative h-48 overflow-hidden bg-neutral-100">
+              <div
+                onClick={() => onReadPost && onReadPost(post)}
+                className="relative h-48 overflow-hidden bg-neutral-100 cursor-pointer"
+              >
                 <img
                   src={post.image}
                   alt={post.title}
@@ -67,7 +71,10 @@ export default function BlogSection({ onReadPost }) {
                   <span>By {post.author}</span> • <span>{post.date}</span>
                 </div>
 
-                <h3 className="text-base font-extrabold text-neutral-900 group-hover:text-[#c81d25] transition leading-snug line-clamp-2">
+                <h3
+                  onClick={() => onReadPost && onReadPost(post)}
+                  className="text-base font-extrabold text-neutral-900 group-hover:text-[#c81d25] transition leading-snug line-clamp-2 cursor-pointer"
+                >
                   {post.title}
                 </h3>
 

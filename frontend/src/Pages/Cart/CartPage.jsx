@@ -10,6 +10,7 @@ import CartOrderSummary from '../../Components/Cart/CartOrderSummary'
 import CartCrossSells from '../../Components/Cart/CartCrossSells'
 import CartEmptyState from '../../Components/Cart/CartEmptyState'
 import { useCart } from '../../context/CartContext'
+import { useWishlist } from '../../context/WishlistContext'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 
 export default function CartPage({ onNavigate, onSelectProduct }) {
@@ -32,7 +33,7 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
     closeDrawer,
   } = useCart()
 
-  const [wishlist, setWishlist] = useState({ 'deal-1': true, 'rel-3': true })
+  const { wishlistCount, wishlistMap, addToWishlist, toggleWishlist } = useWishlist()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('CART')
   const [toast, setToast] = useState(null)
@@ -52,8 +53,8 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
   }
 
   const handleSaveToWishlist = (item) => {
-    setWishlist((prev) => ({ ...prev, [item.id]: true }))
-    removeFromCart(item.id)
+    addToWishlist(item)
+    removeFromCart(item.cartItemId || item.id)
     showToast(`Saved ${item.title} to your wishlist!`)
   }
 
@@ -121,7 +122,7 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
       <Navbar
         cartCount={totalItemCount}
         onOpenCart={openDrawer}
-        wishlistCount={Object.keys(wishlist).length}
+        wishlistCount={wishlistCount}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeNav={activeNav}
@@ -184,10 +185,10 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
               onQuickAdd={handleAddToCart}
               onSelectProduct={onSelectProduct}
               onSearchTag={(tag) => showToast(`Searching drops for "${tag}"`)}
-              wishlist={wishlist}
-              onToggleWishlist={(id) => {
-                setWishlist((prev) => ({ ...prev, [id]: !prev[id] }))
-                showToast('Wishlist updated!')
+              wishlist={wishlistMap}
+              onToggleWishlist={async (productOrId) => {
+                const isAdded = await toggleWishlist(productOrId)
+                showToast(isAdded ? 'Added to Wishlist!' : 'Removed from Wishlist')
               }}
             />
           </>
@@ -196,7 +197,7 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
           <>
             {/* Header with Breadcrumb */}
             <CartHeader
-              itemCount={items.length}
+              itemCount={totalItemCount}
               onBackToHome={() => (onNavigate ? onNavigate('HOME') : navigate('/'))}
             />
 
@@ -244,12 +245,12 @@ export default function CartPage({ onNavigate, onSelectProduct }) {
             {/* Frequently Paired ("Complete The Look") */}
             <CartCrossSells
               onAddToCart={handleAddToCart}
-              onAddToWishlist={(p) => {
-                setWishlist((prev) => ({ ...prev, [p.id]: true }))
+              onAddToWishlist={async (p) => {
+                await addToWishlist(p)
                 showToast(`Added ${p.title} to Wishlist!`)
               }}
               onSelectProduct={onSelectProduct}
-              wishlist={wishlist}
+              wishlist={wishlistMap}
             />
           </>
         )}

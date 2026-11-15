@@ -1,14 +1,14 @@
 export const CATALOG_COLLECTIONS = [
   'All',
+  'Shoes',
+  'Bags',
+  'Dress & Clothing',
+  'Exclusive Collabs',
   'Retro Basketball',
   'Running & Lifestyle',
-  'Apparel & Hoodies',
-  'Exclusive Collabs',
   'Technical Outerwear',
-  'Limited Drops & Care',
+  'Accessories & Care',
   'Top Best Deals',
-  'Automated Collection',
-  'Hydrogen',
 ]
 
 export const CATALOG_SIZES = [
