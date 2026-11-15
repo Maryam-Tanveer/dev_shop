@@ -6,12 +6,15 @@ import CartDrawer from '../../Components/CartDrawer'
 import FaqHero from '../../Components/Faq/FaqHero'
 import FaqAccordion from '../../Components/Faq/FaqAccordion'
 import FaqContactBanner from '../../Components/Faq/FaqContactBanner'
+import FaqContactModal from '../../Components/Faq/FaqContactModal'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 import { useCart } from '../../context/CartContext'
+import { useAuth } from '../../context/AuthContext'
 
 export default function FaqPage({ onNavigate, onSelectProduct }) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { user: currentUser } = useAuth()
 
   const urlCategory = searchParams.get('category') || 'shipping'
   const urlItem = searchParams.get('item') || ''
@@ -28,6 +31,7 @@ export default function FaqPage({ onNavigate, onSelectProduct }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeNav, setActiveNav] = useState('FAQ')
   const [toast, setToast] = useState(null)
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
 
   // Keep state in sync if URL query parameter changes
   useEffect(() => {
@@ -111,9 +115,16 @@ export default function FaqPage({ onNavigate, onSelectProduct }) {
 
         {/* 3. Contact Support Callout Card */}
         <FaqContactBanner
-          onContactSupport={() => showToast('Opening live chat with Dev Shop concierge team...')}
+          onContactSupport={() => setIsContactModalOpen(true)}
         />
       </main>
+
+      {/* 24/7 Concierge Support Modal */}
+      <FaqContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        currentUser={currentUser}
+      />
 
       {/* Footer */}
       <Footer onSubscribe={(email) => showToast(`Subscribed ${email} to drop notifications!`)} />

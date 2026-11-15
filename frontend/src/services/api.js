@@ -529,6 +529,16 @@ export const api = {
       method: 'DELETE',
     })
   },
+
+  /**
+   * Submit 24/7 Concierge Support Ticket
+   */
+  async submitSupportTicket(ticketData) {
+    return request('/faqs/contact', {
+      method: 'POST',
+      body: JSON.stringify(ticketData),
+    })
+  },
 }
 
 export default api

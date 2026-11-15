@@ -3,7 +3,11 @@ import { SlidersHorizontal, Check } from 'lucide-react'
 import {
   CATALOG_COLLECTIONS as COLLECTIONS,
   CATALOG_SIZES as SIZES,
-  CATALOG_BRANDS as BRANDS
+  CATALOG_BRANDS as BRANDS,
+  APPAREL_SIZES,
+  BAG_SIZES,
+  ACCESSORY_SIZES,
+  getSizeGroupForCategory,
 } from '../../data/catalog'
 
 export default function CatalogSidebarFilters({
@@ -19,6 +23,26 @@ export default function CatalogSidebarFilters({
 }) {
   const [minPrice, setMinPrice] = useState(priceRange[0] ?? 50)
   const [maxPrice, setMaxPrice] = useState(priceRange[1] ?? 800)
+  const [activeTab, setActiveTab] = useState('shoes')
+
+  const sizeGroup = getSizeGroupForCategory(selectedCollection)
+  const isAllOrDeals = selectedCollection === 'All' || selectedCollection === 'Top Best Deals'
+
+  const currentSizes = isAllOrDeals
+    ? activeTab === 'shoes'
+      ? SIZES
+      : activeTab === 'apparel'
+      ? APPAREL_SIZES
+      : BAG_SIZES
+    : sizeGroup.sizes
+
+  const currentTitle = isAllOrDeals
+    ? activeTab === 'shoes'
+      ? 'SIZE (US MEN)'
+      : activeTab === 'apparel'
+      ? 'SIZE (APPAREL)'
+      : 'SIZE / CAPACITY'
+    : sizeGroup.title
 
   // Keep local state in sync when parent priceRange changes (e.g. Reset or Clear All)
   useEffect(() => {
@@ -242,24 +266,80 @@ export default function CatalogSidebarFilters({
         </div>
       </div>
 
-      {/* 3. SIZE (US MEN) */}
+      {/* 3. DYNAMIC SIZE FILTER */}
       <div className="pt-2 border-t border-neutral-100">
-        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-800 mb-3">
-          SIZE (US MEN)
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-800">
+            {currentTitle}
+          </h3>
+          {selectedSizes.length > 0 && (
+            <span className="text-[10px] font-bold text-[#c81d25]">
+              {selectedSizes.length} selected
+            </span>
+          )}
+        </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          {SIZES.map((sz) => {
+        {/* Subcategory toggle for All / Deals */}
+        {isAllOrDeals && (
+          <div className="flex items-center gap-1 p-1 bg-neutral-100 rounded-xl mb-3 text-[11px] font-bold">
+            <button
+              type="button"
+              onClick={() => setActiveTab('shoes')}
+              className={`flex-1 py-1 rounded-lg transition cursor-pointer ${
+                activeTab === 'shoes'
+                  ? 'bg-white text-neutral-900 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              Shoes
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('apparel')}
+              className={`flex-1 py-1 rounded-lg transition cursor-pointer ${
+                activeTab === 'apparel'
+                  ? 'bg-white text-neutral-900 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              Clothing
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('bags')}
+              className={`flex-1 py-1 rounded-lg transition cursor-pointer ${
+                activeTab === 'bags'
+                  ? 'bg-white text-neutral-900 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              Bags
+            </button>
+          </div>
+        )}
+
+        <div
+          className={`grid ${
+            currentSizes.length <= 3
+              ? 'grid-cols-3'
+              : currentSizes.length <= 4
+              ? 'grid-cols-2'
+              : currentSizes.length <= 6
+              ? 'grid-cols-3'
+              : 'grid-cols-4'
+          } gap-2`}
+        >
+          {currentSizes.map((sz) => {
             const isSelected = selectedSizes.includes(sz)
             return (
               <button
                 key={sz}
                 type="button"
                 onClick={() => onToggleSize && onToggleSize(sz)}
-                className={`w-full aspect-square rounded-full text-xs font-bold flex items-center justify-center transition active:scale-95 shadow-2xs ${
+                className={`w-full py-2 px-1 rounded-xl text-xs font-bold flex items-center justify-center transition active:scale-95 shadow-2xs border cursor-pointer ${
                   isSelected
-                    ? 'bg-[#c81d25] text-white shadow-xs'
-                    : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800'
+                    ? 'bg-[#c81d25] text-white border-[#c81d25] shadow-xs'
+                    : 'bg-neutral-100 hover:bg-neutral-200/80 text-neutral-800 border-transparent'
                 }`}
               >
                 {sz}

@@ -108,10 +108,22 @@ export const getProducts = asyncHandler(async (req, res) => {
     sizeList.push(size)
   }
   if (sizeList.length > 0) {
+    const expandedSizeList = [...sizeList]
+    sizeList.forEach((s) => {
+      const num = parseFloat(s)
+      if (!isNaN(num)) {
+        expandedSizeList.push(num.toFixed(1))
+        if (Number.isInteger(num)) {
+          expandedSizeList.push(num.toString())
+        }
+      }
+    })
+    const uniqueSizes = [...new Set(expandedSizeList)]
+
     const sizeConditions = [
-      { sizes: { $in: sizeList } },
-      { size: { $in: sizeList } },
-      { 'specs.size': { $in: sizeList } },
+      { sizes: { $in: uniqueSizes } },
+      { size: { $in: uniqueSizes } },
+      { 'specs.size': { $in: uniqueSizes } },
     ]
     if (filter.$or) {
       filter.$and = filter.$and || []
@@ -242,13 +254,25 @@ export const getProducts = asyncHandler(async (req, res) => {
     }
 
     if (sizeList.length > 0) {
+      const expandedSizeList = [...sizeList]
+      sizeList.forEach((s) => {
+        const num = parseFloat(s)
+        if (!isNaN(num)) {
+          expandedSizeList.push(num.toFixed(1))
+          if (Number.isInteger(num)) {
+            expandedSizeList.push(num.toString())
+          }
+        }
+      })
+      const uniqueSizes = [...new Set(expandedSizeList)].map((s) => String(s).toLowerCase())
+
       masterList = masterList.filter((p) => {
         const pSizes = Array.isArray(p.sizes)
-          ? p.sizes.map(String)
+          ? p.sizes.map((s) => (typeof s === 'string' ? s : s?.size || '')).map((s) => String(s).toLowerCase())
           : p.size
-          ? [String(p.size)]
+          ? [String(p.size).toLowerCase()]
           : []
-        return sizeList.some((s) => pSizes.includes(String(s)))
+        return uniqueSizes.some((s) => pSizes.includes(s))
       })
     }
 

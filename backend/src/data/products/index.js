@@ -159,17 +159,35 @@ export const toDetailProduct = (p) => {
         { id: 'default', name: 'Original Colorway', color: '#171717' }
       ]
 
+  const getDefaultSizesForCategory = (cat) => {
+    const c = String(cat || '').toLowerCase()
+    if (/dress|clothing|apparel|hoodie|streetwear|tee|shirt|jacket|outerwear/i.test(c)) {
+      return [
+        { size: 'S', status: 'In Stock', badgeColor: 'text-neutral-400' },
+        { size: 'M', status: 'In Stock', badgeColor: 'text-neutral-400' },
+        { size: 'L', status: 'In Stock', badgeColor: 'text-neutral-400' },
+        { size: 'XL', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      ]
+    }
+    if (/bag|pack|sling|duffle|accessories|care/i.test(c)) {
+      return [
+        { size: 'One Size', status: 'In Stock', badgeColor: 'text-neutral-400' }
+      ]
+    }
+    return [
+      { size: '8.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '8.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '9.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '9.5', status: 'In Stock', badgeColor: 'text-[#c81d25] font-extrabold' },
+      { size: '10.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '10.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '11.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
+    ]
+  }
+
   const normalizedSizes = p.sizes && p.sizes.length > 0
     ? p.sizes
-    : [
-        { size: '8.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-        { size: '8.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-        { size: '9.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-        { size: '9.5', status: '2 Left', badgeColor: 'text-[#c81d25] font-extrabold' },
-        { size: '10.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-        { size: '10.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-        { size: '11.0', status: 'Low', badgeColor: 'text-amber-600 font-bold' },
-      ]
+    : getDefaultSizesForCategory(p.category)
 
   return {
     ...light,

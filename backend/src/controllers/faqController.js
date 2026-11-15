@@ -1,6 +1,7 @@
 import Faq from '../models/Faq.js'
 import { FAQ_CATEGORIES, FAQ_DATA } from '../data/mockData.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
+import { AppError } from '../utils/AppError.js'
 
 export const getFaqs = asyncHandler(async (req, res) => {
   const { category } = req.query
@@ -33,5 +34,34 @@ export const getFaqCategories = asyncHandler(async (req, res) => {
     success: true,
     count: FAQ_CATEGORIES.length,
     data: FAQ_CATEGORIES,
+  })
+})
+
+/**
+ * Submit Concierge Support Ticket
+ * POST /api/faqs/contact
+ */
+export const submitSupportTicket = asyncHandler(async (req, res, next) => {
+  const { name, email, topic, orderNumber, message } = req.body
+
+  if (!email || !message) {
+    return next(new AppError('Please provide both your email address and message.', 400))
+  }
+
+  const ticketId = `TKT-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`
+
+  res.status(201).json({
+    success: true,
+    message: 'Your concierge inquiry has been received. Our support team will reply within 15 minutes.',
+    data: {
+      ticketId,
+      name: name || 'Valued Collector',
+      email,
+      topic: topic || 'General Inquiry',
+      orderNumber: orderNumber || null,
+      status: 'OPEN',
+      createdAt: new Date().toISOString(),
+      estimatedResponseTime: 'Under 15 minutes',
+    },
   })
 })

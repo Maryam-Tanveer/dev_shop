@@ -6,18 +6,42 @@ export default function ProductInfo({ product, onAddToCart, onBuyNow, onSizeGuid
     { id: 'default', name: 'Standard Edition', color: '#171717' }
   ]
 
-  const sizes = product?.sizes || [
-    { size: '8.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-    { size: '8.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-    { size: '9.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-    { size: '9.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-    { size: '10.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-    { size: '10.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-    { size: '11.0', status: 'In Stock', badgeColor: 'text-neutral-400' }
-  ]
+  const categoryLower = String(product?.category || '').toLowerCase()
+  const titleLower = String(product?.title || '').toLowerCase()
+
+  const isShoes =
+    /shoe|sneaker|dunk|jordan|yeezy|court|skate|running|retro|basketball|lifestyle|runner/i.test(categoryLower) ||
+    /shoe|sneaker|dunk|jordan|yeezy|runner|runner|cleat/i.test(titleLower)
+  const isClothing =
+    /dress|clothing|apparel|hoodie|streetwear|tee|shirt|jacket|outerwear|cargo|pant/i.test(categoryLower) ||
+    /hoodie|tee|jacket|pant|cargo|shirt|shell|crewneck/i.test(titleLower)
+  const isBags =
+    /bag|pack|sling|duffle/i.test(categoryLower) ||
+    /bag|sling|duffle|pack|vest/i.test(titleLower)
+
+  // Default fallback sizes strictly matching category if backend didn't supply them
+  const fallbackSizes = isClothing
+    ? ['S', 'M', 'L', 'XL']
+    : isBags
+    ? ['One Size']
+    : isShoes
+    ? ['8.0', '8.5', '9.0', '9.5', '10.0', '10.5', '11.0']
+    : ['Standard']
+
+  const rawSizes =
+    Array.isArray(product?.sizes) && product.sizes.length > 0
+      ? product.sizes
+      : fallbackSizes
+
+  const sizes = rawSizes.map((s) => {
+    if (typeof s === 'string') {
+      return { size: s, status: 'In Stock', badgeColor: 'text-neutral-400' }
+    }
+    return s
+  })
 
   const [selectedColor, setSelectedColor] = useState(colorways[0])
-  const [selectedSize, setSelectedSize] = useState(sizes[2]?.size || sizes[0]?.size || '9.0')
+  const [selectedSize, setSelectedSize] = useState(sizes[0]?.size || 'Standard')
   const [added, setAdded] = useState(false)
 
   useEffect(() => {
@@ -25,9 +49,17 @@ export default function ProductInfo({ product, onAddToCart, onBuyNow, onSizeGuid
       setSelectedColor(colorways[0])
     }
     if (sizes && sizes.length > 0) {
-      setSelectedSize(sizes[2]?.size || sizes[0]?.size)
+      setSelectedSize(sizes[0]?.size || 'Standard')
     }
   }, [product?.id])
+
+  const sizeHeading = isShoes
+    ? 'AVAILABLE SIZES (US MEN)'
+    : isClothing
+    ? 'AVAILABLE SIZES'
+    : isBags
+    ? 'SIZE & CAPACITY'
+    : 'AVAILABLE SIZES'
 
   const handleAdd = () => {
     setAdded(true)
@@ -122,66 +154,57 @@ export default function ProductInfo({ product, onAddToCart, onBuyNow, onSizeGuid
         )}
       </div>
 
-      {/* Colorway Selection */}
-      <div>
-        <div className="flex items-center justify-between text-xs mb-2.5">
-          <span className="font-extrabold uppercase tracking-wider text-neutral-700">COLORWAY:</span>
-          <span className="font-medium text-neutral-500">{selectedColor?.name}</span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {colorways.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setSelectedColor(c)}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                selectedColor?.id === c.id
-                  ? 'ring-2 ring-offset-2 ring-[#c81d25] scale-105'
-                  : 'hover:scale-105 opacity-80 hover:opacity-100'
-              }`}
-              style={{ backgroundColor: c.color }}
-              title={c.name}
-            >
-              {selectedColor?.id === c.id && <Check className="w-4 h-4 text-white stroke-[3]" />}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Available Sizes */}
       <div>
         <div className="flex items-center justify-between text-xs mb-2.5">
           <span className="font-extrabold uppercase tracking-wider text-neutral-800">
-            AVAILABLE SIZES (US MEN)
+            {sizeHeading}
           </span>
-          <button
-            onClick={onSizeGuide}
-            className="flex items-center gap-1 text-[#c81d25] font-bold text-xs hover:underline"
-          >
-            <Ruler className="w-3.5 h-3.5" />
-            <span>Size Guide</span>
-          </button>
+          {(isShoes || isClothing) && (
+            <button
+              onClick={onSizeGuide}
+              className="flex items-center gap-1 text-[#c81d25] font-bold text-xs hover:underline cursor-pointer"
+            >
+              <Ruler className="w-3.5 h-3.5" />
+              <span>{isClothing ? 'Size Chart' : 'Size Guide'}</span>
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+        <div
+          className={`grid ${
+            sizes.length <= 2
+              ? 'grid-cols-2'
+              : sizes.length <= 4
+              ? 'grid-cols-4'
+              : 'grid-cols-4 sm:grid-cols-7'
+          } gap-2`}
+        >
           {sizes.map((s) => {
             const isSelected = selectedSize === s.size
             return (
               <button
                 key={s.size}
+                type="button"
                 onClick={() => setSelectedSize(s.size)}
-                className={`p-2 rounded-xl border flex flex-col items-center justify-center transition text-center ${
+                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center transition text-center active:scale-95 cursor-pointer ${
                   isSelected
-                    ? 'border-[#c81d25] bg-rose-50/40 ring-1 ring-[#c81d25]'
-                    : 'border-neutral-200 bg-white hover:border-neutral-300'
+                    ? 'border-[#c81d25] bg-rose-50/50 ring-1 ring-[#c81d25] shadow-xs'
+                    : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50'
                 }`}
               >
-                <span className={`text-xs font-black ${isSelected ? 'text-[#c81d25]' : 'text-neutral-900'}`}>
+                <span
+                  className={`text-xs font-black ${
+                    isSelected ? 'text-[#c81d25]' : 'text-neutral-900'
+                  }`}
+                >
                   {s.size}
                 </span>
-                <span className={`text-[9px] ${s.badgeColor}`}>
-                  {s.status}
-                </span>
+                {s.status && (
+                  <span className={`text-[9px] ${s.badgeColor || 'text-neutral-400'}`}>
+                    {s.status}
+                  </span>
+                )}
               </button>
             )
           })}

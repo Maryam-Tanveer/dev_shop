@@ -25,13 +25,10 @@ export const VAULT_HARDWARE = {
       { id: 'amber', name: 'Desert Honey Amber', color: '#d97706' },
     ],
     sizes: [
-      { size: '8.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '8.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '9.0', status: '2 Left', badgeColor: 'text-[#c81d25] font-extrabold' },
-      { size: '9.5', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '10.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
-      { size: '10.5', status: 'Low', badgeColor: 'text-amber-600 font-bold' },
-      { size: '11.0', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '152cm', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '155cm', status: 'In Stock', badgeColor: 'text-neutral-400' },
+      { size: '158cm', status: '2 Left', badgeColor: 'text-[#c81d25] font-extrabold' },
+      { size: '162cm', status: 'Low', badgeColor: 'text-amber-600 font-bold' },
     ],
     thumbnails: [
       { id: 'profile', label: 'FRONT', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=80' },
