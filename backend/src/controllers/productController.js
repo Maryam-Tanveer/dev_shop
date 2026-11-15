@@ -180,8 +180,8 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   // Master fallback if DB is not connected or empty
   let results = dbProducts
-  if (!results) {
-    let masterList = Array.isArray(PRODUCTS_DATABASE) ? [...PRODUCTS_DATABASE] : []
+  if (!results || results.length === 0) {
+    let masterList = Object.values(PRODUCTS_DATABASE || {})
 
     // Filter in-memory masterList with exact criteria
     if (category && category !== 'All') {
@@ -322,6 +322,13 @@ export const getProductById = asyncHandler(async (req, res, next) => {
   }
 
   if (!dbProduct) {
+    const fallback = PRODUCTS_DATABASE[id] || RAW_DATABASE[id]
+    if (fallback) {
+      return res.json({
+        success: true,
+        data: toDetailProduct(fallback),
+      })
+    }
     return next(new AppError(`Product with id '${id}' not found`, 404))
   }
 
@@ -332,45 +339,70 @@ export const getProductById = asyncHandler(async (req, res, next) => {
 })
 
 /**
- * Get best deals (Lightweight shape) from MongoDB
+ * Get best deals (Lightweight shape) from MongoDB with master database fallback
  */
 export const getDeals = asyncHandler(async (req, res) => {
-  const deals = await Product.find({
-    $or: [
-      { originalPrice: { $gt: 0 } },
-      { badge: /OFF|SALE|DEAL/i },
-      { id: /^deal-/ },
-    ],
-  })
-    .limit(8)
-    .lean()
+  let deals = []
+  try {
+    deals = await Product.find({
+      $or: [
+        { originalPrice: { $gt: 0 } },
+        { badge: /OFF|SALE|DEAL/i },
+        { id: /^deal-/ },
+      ],
+    })
+      .limit(8)
+      .lean()
+  } catch (err) {
+    console.warn('[getDeals] DB query error:', err.message)
+  }
 
-  const results = deals.length > 0 ? deals : await Product.find().limit(4).lean()
+  if (!deals || deals.length === 0) {
+    deals = Object.values(PRODUCTS_DATABASE || {})
+      .filter((p) => p.originalPrice > 0 || /OFF|SALE|DEAL/i.test(p.badge) || /^deal-/i.test(p.id))
+      .slice(0, 8)
+  }
 
   res.json({
     success: true,
-    count: results.length,
-    data: results.map(toLightProduct),
+    count: deals.length,
+    data: deals.map(toLightProduct),
   })
 })
 
 /**
- * Get related products (Lightweight shape) from MongoDB
+ * Get related products (Lightweight shape) from MongoDB with master database fallback
  */
 export const getRelatedProducts = asyncHandler(async (req, res) => {
   const { category, currentId } = req.query
-  const filter = {}
+  let products = []
+  try {
+    const filter = {}
+    if (category && category !== 'All') {
+      filter.category = new RegExp(escapeRegex(category), 'i')
+    }
+    if (currentId) {
+      filter.id = { $ne: currentId }
+    }
 
-  if (category && category !== 'All') {
-    filter.category = new RegExp(escapeRegex(category), 'i')
-  }
-  if (currentId) {
-    filter.id = { $ne: currentId }
+    products = await Product.find(filter).limit(4).lean()
+    if (products.length === 0) {
+      products = await Product.find().limit(4).lean()
+    }
+  } catch (err) {
+    console.warn('[getRelatedProducts] DB query error:', err.message)
   }
 
-  let products = await Product.find(filter).limit(4).lean()
-  if (products.length === 0) {
-    products = await Product.find().limit(4).lean()
+  if (!products || products.length === 0) {
+    const all = Object.values(PRODUCTS_DATABASE || {})
+    products = all
+      .filter(
+        (p) =>
+          (!category || category === 'All' || new RegExp(escapeRegex(category), 'i').test(p.category)) &&
+          p.id !== currentId
+      )
+      .slice(0, 4)
+    if (products.length === 0) products = all.slice(0, 4)
   }
 
   res.json({

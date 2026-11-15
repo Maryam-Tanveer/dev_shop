@@ -1,7 +1,7 @@
 import Faq from '../models/Faq.js'
 import { FAQ_CATEGORIES, FAQ_DATA } from '../data/mockData.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { AppError } from '../utils/AppError.js'
+import AppError from '../utils/AppError.js'
 
 export const getFaqs = asyncHandler(async (req, res) => {
   const { category } = req.query
