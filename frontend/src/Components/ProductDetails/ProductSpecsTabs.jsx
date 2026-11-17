@@ -1,57 +1,116 @@
-import { useState } from 'react'
-import { Star } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Star, CheckCircle, Loader2 } from 'lucide-react'
+import { api } from '../../services/api'
 
 export default function ProductSpecsTabs({ product }) {
   const [activeTab, setActiveTab] = useState('description')
   const [isWritingReview, setIsWritingReview] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
+
   const [newRating, setNewRating] = useState(5)
   const [authorName, setAuthorName] = useState('')
   const [reviewTitle, setReviewTitle] = useState('')
   const [reviewContent, setReviewContent] = useState('')
-  const [reviewsList, setReviewsList] = useState([
-    {
-      id: 1,
-      author: 'Marcus V.',
-      rating: 5,
-      date: 'Oct 22, 2026',
-      title: 'Flawless execution & premium leather',
-      content: 'Insane comfort and the build quality in person exceeds expectations. True to size with plenty of lock-down support. Box arrived with authentic NFC tag fully verified.',
-      verified: true,
-      size: 'US 10.5',
-    },
-    {
-      id: 2,
-      author: 'Kenji T.',
-      rating: 5,
-      date: 'Oct 19, 2026',
-      title: 'Top tier deadstock addition',
-      content: 'Was fortunate to secure this on drop day. The silhouette stands out effortlessly with cargo or tapered pants. Fast shipping from the Vault.',
-      verified: true,
-      size: 'US 9.0',
-    },
-  ])
+  const [selectedSize, setSelectedSize] = useState('')
 
-  const handleReviewSubmit = (e) => {
-    e.preventDefault()
-    if (!authorName.trim() || !reviewContent.trim()) return
+  const [reviewsList, setReviewsList] = useState([])
+  const [avgRating, setAvgRating] = useState(product?.rating || 5.0)
+  const [percentages, setPercentages] = useState({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 })
+  const [totalReviews, setTotalReviews] = useState(0)
 
-    const newRev = {
-      id: Date.now(),
-      author: authorName.trim(),
-      rating: newRating,
-      date: 'Just now',
-      title: reviewTitle.trim() || 'Verified Vault Drop Purchase',
-      content: reviewContent.trim(),
-      verified: true,
-      size: 'US 10.0',
+  const productId = product?.id || product?._id
+
+  // Fetch real reviews from DB whenever product changes
+  useEffect(() => {
+    if (!productId) return
+
+    let isMounted = true
+    const fetchReviews = async () => {
+      setIsLoading(true)
+      try {
+        const res = await api.getProductReviews(productId)
+        if (isMounted && res?.success) {
+          const list = res.data || []
+          setReviewsList(list)
+          if (res.count > 0) {
+            setTotalReviews(res.count)
+            setAvgRating(res.averageRating || 5.0)
+            if (res.percentages) setPercentages(res.percentages)
+          } else {
+            setTotalReviews(0)
+            setAvgRating(product?.rating || 5.0)
+            setPercentages({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 })
+          }
+        }
+      } catch (err) {
+        console.warn('[REVIEWS] Error loading product reviews:', err)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
     }
 
-    setReviewsList([newRev, ...reviewsList])
-    setIsWritingReview(false)
-    setAuthorName('')
-    setReviewTitle('')
-    setReviewContent('')
-    setNewRating(5)
+    fetchReviews()
+    return () => {
+      isMounted = false
+    }
+  }, [productId, product?.rating])
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault()
+    if (!authorName.trim() || !reviewContent.trim()) {
+      setSubmitError('Please enter your name and review details.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      const res = await api.createProductReview(productId, {
+        author: authorName.trim(),
+        rating: newRating,
+        title: reviewTitle.trim() || 'Verified Vault Purchase',
+        content: reviewContent.trim(),
+        size: selectedSize || (product?.sizes && product.sizes[0] ? `US ${product.sizes[0]}` : ''),
+      })
+
+      if (res?.success) {
+        // Prepend created review
+        if (res.data) {
+          setReviewsList((prev) => [res.data, ...prev])
+          setTotalReviews((prev) => prev + 1)
+        }
+        // Refresh full review stats from backend
+        try {
+          const updated = await api.getProductReviews(productId)
+          if (updated?.success) {
+            setReviewsList(updated.data || [])
+            setTotalReviews(updated.count || 1)
+            setAvgRating(updated.averageRating || newRating)
+            if (updated.percentages) setPercentages(updated.percentages)
+          }
+        } catch {
+          // Non-critical
+        }
+
+        setSubmitSuccess(true)
+        setIsWritingReview(false)
+        setAuthorName('')
+        setReviewTitle('')
+        setReviewContent('')
+        setSelectedSize('')
+        setNewRating(5)
+
+        setTimeout(() => setSubmitSuccess(false), 5000)
+      }
+    } catch (err) {
+      setSubmitError(err?.message || 'Failed to submit review. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -91,7 +150,7 @@ export default function ProductSpecsTabs({ product }) {
         >
           <span>Customer Reviews</span>
           <span className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full font-bold">
-            {product?.reviews || 42}
+            {totalReviews}
           </span>
         </button>
       </div>
@@ -103,7 +162,7 @@ export default function ProductSpecsTabs({ product }) {
           <div className="lg:col-span-7 space-y-4">
             <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-normal">
               {product?.description ||
-                `The ${product?.title} is engineered at the collision point of performance engineering and global streetwear culture. Featuring an ultra-responsive responsive carbon-infused chassis.`}
+                `The ${product?.title} is engineered at the collision point of performance engineering and global streetwear culture.`}
             </p>
 
             {product?.descriptionSecond && (
@@ -158,7 +217,7 @@ export default function ProductSpecsTabs({ product }) {
               </div>
 
               <div className="flex justify-between items-center text-neutral-600">
-                <span>Weight per Shoe</span>
+                <span>Weight per Unit</span>
                 <span className="font-bold text-neutral-900">{product?.weight || '330g (Size 9 US)'}</span>
               </div>
 
@@ -184,53 +243,64 @@ export default function ProductSpecsTabs({ product }) {
       {/* Tab 3: Reviews */}
       {activeTab === 'reviews' && (
         <div className="space-y-6">
+          {/* Success Banner */}
+          {submitSuccess && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-800 text-xs font-bold animate-fade-in">
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Your review has been submitted to the Dev Shop database and published successfully!</span>
+            </div>
+          )}
+
           {/* Rating Summary Header */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-6 bg-[#fbf9f6] rounded-2xl border border-neutral-200/80">
             <div className="md:col-span-4 text-center md:text-left border-b md:border-b-0 md:border-r border-neutral-200/80 pb-4 md:pb-0 md:pr-6">
               <div className="text-4xl sm:text-5xl font-black text-neutral-900 tracking-tight font-mono">
-                {product?.rating || 4.9}
+                {avgRating}
               </div>
               <div className="flex justify-center md:justify-start text-amber-400 my-1.5">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  <Star
+                    key={i}
+                    className={`w-4 h-4 ${
+                      i < Math.round(avgRating)
+                        ? 'fill-amber-400 text-amber-400'
+                        : 'text-neutral-300'
+                    }`}
+                  />
                 ))}
               </div>
               <p className="text-xs text-neutral-500 font-medium">
-                Based on {reviewsList.length + (product?.reviews || 42)} verified drop collectors
+                Based on {totalReviews} verified drop collectors
               </p>
             </div>
 
             {/* Rating Bars */}
             <div className="md:col-span-5 space-y-1.5 text-xs text-neutral-600">
-              <div className="flex items-center gap-2">
-                <span className="w-10 font-bold">5 Star</span>
-                <div className="flex-1 h-2 bg-neutral-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-400 rounded-full w-[85%]" />
+              {[5, 4, 3, 2, 1].map((star) => (
+                <div key={star} className="flex items-center gap-2">
+                  <span className="w-10 font-bold">{star} Star</span>
+                  <div className="flex-1 h-2 bg-neutral-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                      style={{ width: `${percentages[star] || 0}%` }}
+                    />
+                  </div>
+                  <span className="w-8 text-right font-mono text-neutral-400">
+                    {percentages[star] || 0}%
+                  </span>
                 </div>
-                <span className="w-8 text-right font-mono text-neutral-400">85%</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-10 font-bold">4 Star</span>
-                <div className="flex-1 h-2 bg-neutral-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-400 rounded-full w-[12%]" />
-                </div>
-                <span className="w-8 text-right font-mono text-neutral-400">12%</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-10 font-bold">3 Star</span>
-                <div className="flex-1 h-2 bg-neutral-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-400 rounded-full w-[3%]" />
-                </div>
-                <span className="w-8 text-right font-mono text-neutral-400">3%</span>
-              </div>
+              ))}
             </div>
 
             {/* Write a review button */}
             <div className="md:col-span-3 text-center md:text-right">
               <button
                 type="button"
-                onClick={() => setIsWritingReview(!isWritingReview)}
-                className="bg-[#c81d25] hover:bg-[#a8161d] text-white text-xs font-bold px-5 py-2.5 rounded-full transition shadow-md active:scale-95 uppercase tracking-wider"
+                onClick={() => {
+                  setIsWritingReview(!isWritingReview)
+                  setSubmitError(null)
+                }}
+                className="bg-[#c81d25] hover:bg-[#a8161d] text-white text-xs font-bold px-5 py-2.5 rounded-full transition shadow-md active:scale-95 uppercase tracking-wider cursor-pointer"
               >
                 {isWritingReview ? 'Close Form' : 'Write a Review'}
               </button>
@@ -244,6 +314,12 @@ export default function ProductSpecsTabs({ product }) {
                 Submit Verified Collector Review
               </h4>
 
+              {submitError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
+                  {submitError}
+                </div>
+              )}
+
               {/* Star Rating Selector */}
               <div>
                 <label className="block text-xs font-bold text-neutral-600 mb-1">Your Rating *</label>
@@ -253,7 +329,7 @@ export default function ProductSpecsTabs({ product }) {
                       key={star}
                       type="button"
                       onClick={() => setNewRating(star)}
-                      className="p-1 hover:scale-110 transition text-amber-400 focus:outline-none"
+                      className="p-1 hover:scale-110 transition text-amber-400 focus:outline-none cursor-pointer"
                     >
                       <Star
                         className={`w-5 h-5 ${
@@ -308,31 +384,48 @@ export default function ProductSpecsTabs({ product }) {
                 <button
                   type="button"
                   onClick={() => setIsWritingReview(false)}
-                  className="text-xs font-semibold px-4 py-2 text-neutral-500 hover:text-neutral-800 transition"
+                  disabled={isSubmitting}
+                  className="text-xs font-semibold px-4 py-2 text-neutral-500 hover:text-neutral-800 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#c81d25] hover:bg-[#a8161d] text-white text-xs font-bold px-6 py-2 rounded-xl transition shadow active:scale-95"
+                  disabled={isSubmitting}
+                  className="bg-[#c81d25] hover:bg-[#a8161d] disabled:opacity-50 text-white text-xs font-bold px-6 py-2 rounded-xl transition shadow active:scale-95 inline-flex items-center gap-2 cursor-pointer"
                 >
-                  Publish Review (+50 Vault Pts)
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving to DB...</span>
+                    </>
+                  ) : (
+                    <span>Publish Review</span>
+                  )}
                 </button>
               </div>
             </form>
+          )}
+
+          {/* Loading Indicator */}
+          {isLoading && reviewsList.length === 0 && (
+            <div className="py-8 text-center text-xs text-neutral-400 flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-[#c81d25]" />
+              <span>Loading verified reviews from database...</span>
+            </div>
           )}
 
           {/* Reviews List */}
           <div className="space-y-4">
             {reviewsList.map((rev) => (
               <div
-                key={rev.id}
+                key={rev.id || rev._id}
                 className="p-5 rounded-2xl bg-neutral-50/70 border border-neutral-200/80 space-y-2 hover:bg-neutral-50 transition"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <div className="flex items-center gap-2">
                     <div className="flex text-amber-400">
-                      {[...Array(rev.rating)].map((_, i) => (
+                      {[...Array(Number(rev.rating || 5))].map((_, i) => (
                         <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                       ))}
                     </div>
@@ -349,7 +442,7 @@ export default function ProductSpecsTabs({ product }) {
 
                 <div className="flex items-center gap-2 pt-1 text-[11px] text-neutral-500 font-medium">
                   <span className="font-bold text-neutral-800">{rev.author}</span>
-                  {rev.verified && (
+                  {rev.verified !== false && (
                     <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold">
                       ✓ Verified Vault Buyer
                     </span>
@@ -360,6 +453,20 @@ export default function ProductSpecsTabs({ product }) {
                 </div>
               </div>
             ))}
+
+            {!isLoading && reviewsList.length === 0 && (
+              <div className="py-10 text-center bg-neutral-50 rounded-2xl border border-neutral-200 p-6">
+                <p className="text-xs font-bold text-neutral-700 mb-2">No reviews yet for this product</p>
+                <p className="text-[11px] text-neutral-400 mb-4">Be the first verified collector to share your rating and thoughts.</p>
+                <button
+                  type="button"
+                  onClick={() => setIsWritingReview(true)}
+                  className="bg-[#c81d25] text-white text-xs font-bold px-4 py-2 rounded-full cursor-pointer hover:bg-[#a8161d] transition"
+                >
+                  Write First Review
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

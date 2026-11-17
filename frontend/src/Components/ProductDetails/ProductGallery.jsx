@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Heart, RotateCw } from 'lucide-react'
+import { Heart } from 'lucide-react'
 
 export default function ProductGallery({ product, isWishlisted, onToggleWishlist }) {
   const thumbnails = product?.thumbnails || [
@@ -7,7 +7,6 @@ export default function ProductGallery({ product, isWishlisted, onToggleWishlist
   ]
 
   const [activeThumb, setActiveThumb] = useState(thumbnails[0])
-  const [isRotating, setIsRotating] = useState(false)
 
   // Update active thumbnail when product changes
   useEffect(() => {
@@ -16,25 +15,10 @@ export default function ProductGallery({ product, isWishlisted, onToggleWishlist
     }
   }, [product?.id])
 
-  const handleRotate = () => {
-    setIsRotating(true)
-    setTimeout(() => setIsRotating(false), 800)
-  }
-
   return (
     <div className="flex flex-col gap-4">
       {/* Main Showcase Card */}
       <div className="relative bg-[#f5f5f5] rounded-3xl border border-neutral-200/90 p-6 sm:p-10 flex items-center justify-center min-h-[420px] sm:min-h-[480px] overflow-hidden group">
-        {/* Top Badges */}
-        <div className="absolute top-6 left-6 flex flex-col gap-1.5 z-10">
-          <span className="bg-[#c81d25] text-white text-[10px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full shadow-xs w-fit">
-            {product?.tag || 'LIMITED 350 PAIRS'}
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 bg-white/80 backdrop-blur-xs px-2.5 py-0.5 rounded-md border border-neutral-200/80 w-fit">
-            {product?.subTag || 'AIR VAULT EDITION'}
-          </span>
-        </div>
-
         {/* Favorite Heart Button */}
         <button
           onClick={onToggleWishlist}
@@ -49,20 +33,9 @@ export default function ProductGallery({ product, isWishlisted, onToggleWishlist
           <img
             src={activeThumb?.image || product?.image}
             alt={product?.title || 'Product'}
-            className={`w-full max-h-[340px] object-contain transition-all duration-500 transform ${
-              isRotating ? 'rotate-12 scale-105' : 'group-hover:scale-105'
-            }`}
+            className="w-full max-h-[340px] object-contain transition-all duration-500 transform group-hover:scale-105"
           />
         </div>
-
-        {/* 360 Angle Badge */}
-        <button
-          onClick={handleRotate}
-          className="absolute bottom-6 right-6 inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-xs hover:bg-white border border-neutral-200/90 text-neutral-700 text-[11px] font-bold px-3.5 py-1.5 rounded-full shadow-xs transition active:scale-95 z-10"
-        >
-          <RotateCw className={`w-3.5 h-3.5 text-[#c81d25] ${isRotating ? 'animate-spin' : ''}`} />
-          <span>360 Interactive 3D Angle</span>
-        </button>
       </div>
 
       {/* Thumbnails Row */}

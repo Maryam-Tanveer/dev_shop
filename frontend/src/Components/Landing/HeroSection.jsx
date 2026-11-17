@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Flame, ArrowRight, ShieldCheck, Zap, Ticket, ArrowUpRight } from 'lucide-react'
+import { Flame, ArrowRight, Zap, Ticket, ArrowUpRight } from 'lucide-react'
 import { api } from '../../services/api'
 
 const DEFAULT_HERO = {
@@ -118,13 +118,7 @@ export default function HeroSection({ onAddToCart, onEventDetails, onSelectProdu
                   </button>
                 </div>
 
-                {/* Authenticity Pill */}
-                <div className="mt-4">
-                  <span className="inline-flex items-center gap-1.5 bg-white/80 border border-neutral-300/80 text-neutral-700 text-[10px] font-semibold px-3 py-1 rounded-full">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>100% Genuine Certified</span>
-                  </span>
-                </div>
+
               </div>
 
               {/* Sneaker Hero Image Showcase */}

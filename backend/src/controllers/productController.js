@@ -119,9 +119,13 @@ export const getProducts = asyncHandler(async (req, res) => {
       }
     })
     const uniqueSizes = [...new Set(expandedSizeList)]
+    const sizeRegexes = uniqueSizes.map((s) => new RegExp(`^${escapeRegex(s)}(\\.0)?$`, 'i'))
 
     const sizeConditions = [
       { sizes: { $in: uniqueSizes } },
+      { sizes: { $in: sizeRegexes } },
+      { 'sizes.size': { $in: uniqueSizes } },
+      { 'sizes.size': { $in: sizeRegexes } },
       { size: { $in: uniqueSizes } },
       { 'specs.size': { $in: uniqueSizes } },
     ]
@@ -158,29 +162,32 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   // 6. Sort option
   let sortOption = { isFeatured: -1, createdAt: -1 }
-  if (sort === 'price-low' || sort === 'Price: Low to High') {
+  const s = String(sort || '').toLowerCase().trim()
+  if (s === 'price-low' || s === 'price_asc' || s.includes('low to high') || s.includes('price: low')) {
     sortOption = { price: 1 }
-  } else if (sort === 'price-high' || sort === 'Price: High to Low') {
+  } else if (s === 'price-high' || s === 'price_desc' || s.includes('high to low') || s.includes('price: high')) {
     sortOption = { price: -1 }
-  } else if (sort === 'rating' || sort === 'Highest Rated' || sort === 'Most Hyped') {
+  } else if (s === 'rating' || s.includes('highest rated') || s.includes('hyped')) {
     sortOption = { rating: -1 }
-  } else if (sort === 'newest' || sort === 'Newest Releases' || sort === 'Newest Drops') {
+  } else if (s === 'newest' || s.includes('newest') || s.includes('release') || s.includes('drop')) {
     sortOption = { createdAt: -1 }
   }
 
   let dbProducts = null
+  let dbQueried = false
   try {
     const totalCount = await Product.countDocuments().catch(() => 0)
     if (totalCount > 0) {
+      dbQueried = true
       dbProducts = await Product.find(filter).sort(sortOption).lean()
     }
   } catch (err) {
     console.warn(`[getProducts] DB find failed: ${err.message}`)
   }
 
-  // Master fallback if DB is not connected or empty
+  // Master fallback ONLY when DB is offline or empty
   let results = dbProducts
-  if (!results || results.length === 0) {
+  if (!dbQueried) {
     let masterList = Object.values(PRODUCTS_DATABASE || {})
 
     // Filter in-memory masterList with exact criteria
@@ -272,7 +279,13 @@ export const getProducts = asyncHandler(async (req, res) => {
           : p.size
           ? [String(p.size).toLowerCase()]
           : []
-        return uniqueSizes.some((s) => pSizes.includes(s))
+        return uniqueSizes.some((s) => {
+          const cleanS = String(s).toLowerCase().replace(/^(us\s*|\s*us)/i, '').trim()
+          return pSizes.some((ps) => {
+            const cleanPS = ps.replace(/^(us\s*|\s*us)/i, '').trim()
+            return cleanPS === cleanS || cleanPS === `${cleanS}.0` || `${cleanPS}.0` === cleanS
+          })
+        })
       })
     }
 

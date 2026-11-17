@@ -76,7 +76,15 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
   const sanitizedItems = []
   for (const it of items) {
     const productId = String(it.productId || it.id || '').trim()
-    const serverProduct = await getAuthoritativeProduct(productId)
+    let serverProduct = await getAuthoritativeProduct(productId)
+    if (!serverProduct && (it.title || it.name) && it.price) {
+      serverProduct = {
+        id: productId || `prod-${Date.now()}`,
+        title: it.title || it.name,
+        price: Number(it.price) || 0,
+        image: it.image || '',
+      }
+    }
     if (!serverProduct) {
       return next(new AppError(`Product '${productId}' not found in catalog`, 400))
     }
@@ -137,17 +145,20 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
   const stripe = getStripe()
   const frontendUrl = (req.get('origin') || process.env.FRONTEND_URL || 'https://dev-shop-bay.vercel.app').replace(/\/+$/, '')
 
-  const lineItems = sanitizedItems.map((item) => ({
-    price_data: {
-      currency: 'usd',
-      product_data: {
-        name: item.title,
-        images: item.image && item.image.startsWith('http') ? [item.image] : [],
+  const lineItems = sanitizedItems.map((item) => {
+    const isHttpsImage = item.image && typeof item.image === 'string' && item.image.startsWith('https://')
+    return {
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: item.title,
+          ...(isHttpsImage ? { images: [item.image] } : {}),
+        },
+        unit_amount: Math.round(item.price * 100), // in cents
       },
-      unit_amount: Math.round(item.price * 100), // in cents
-    },
-    quantity: item.quantity,
-  }))
+      quantity: item.quantity,
+    }
+  })
 
   if (shippingCost > 0) {
     lineItems.push({

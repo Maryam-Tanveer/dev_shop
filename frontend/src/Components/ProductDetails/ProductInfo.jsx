@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Flame, Star, ShoppingBag, Zap, Check, ShieldCheck, Truck, RotateCcw, Ruler } from 'lucide-react'
+import { Flame, Star, ShoppingBag, Zap, Check, ShieldCheck, Truck, RotateCcw } from 'lucide-react'
 
 export default function ProductInfo({ product, onAddToCart, onBuyNow, onSizeGuide }) {
   const colorways = product?.colorways || [
@@ -160,15 +160,6 @@ export default function ProductInfo({ product, onAddToCart, onBuyNow, onSizeGuid
           <span className="font-extrabold uppercase tracking-wider text-neutral-800">
             {sizeHeading}
           </span>
-          {(isShoes || isClothing) && (
-            <button
-              onClick={onSizeGuide}
-              className="flex items-center gap-1 text-[#c81d25] font-bold text-xs hover:underline cursor-pointer"
-            >
-              <Ruler className="w-3.5 h-3.5" />
-              <span>{isClothing ? 'Size Chart' : 'Size Guide'}</span>
-            </button>
-          )}
         </div>
 
         <div

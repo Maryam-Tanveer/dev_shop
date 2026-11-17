@@ -144,6 +144,30 @@ export const api = {
   },
 
   /**
+   * Fetch real reviews and statistics for a product
+   */
+  async getProductReviews(productId) {
+    if (!productId) return { success: false, data: [], count: 0, averageRating: 5.0 }
+    try {
+      const res = await request(`/products/${encodeURIComponent(productId)}/reviews`)
+      return res
+    } catch (err) {
+      console.warn(`[API] Failed to fetch reviews for ${productId}:`, err.message)
+      return { success: false, data: [], count: 0, averageRating: 5.0 }
+    }
+  },
+
+  /**
+   * Submit a verified customer review for a product
+   */
+  async createProductReview(productId, reviewData) {
+    return request(`/products/${encodeURIComponent(productId)}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(reviewData),
+    })
+  },
+
+  /**
    * Fetch deals of the day directly from API
    */
   async getDeals() {

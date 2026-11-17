@@ -8,7 +8,7 @@ const CURRENT_YEAR = new Date().getFullYear()
 
 export default function Footer({ onSubscribe }) {
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
+  const [status, setStatus] = useState('idle') // 'idle' | 'loading' | 'success' | 'already_subscribed' | 'error'
   const [message, setMessage] = useState('')
 
   const handleSubmit = async (e) => {
@@ -21,8 +21,19 @@ export default function Footer({ onSubscribe }) {
 
     try {
       const res = await api.subscribeNewsletter(trimmed, 'footer_newsletter')
+
+      if (res?.alreadySubscribed) {
+        setStatus('already_subscribed')
+        setMessage(res.message || 'You are already subscribed to our newsletter!')
+        setTimeout(() => {
+          setStatus('idle')
+          setMessage('')
+        }, 4000)
+        return
+      }
+
       setStatus('success')
-      setMessage(res.message || 'Thanks for subscribing! You are on the list.')
+      setMessage(res.message || 'Thank you for subscribing! Check your email for your welcome discount.')
       if (onSubscribe) onSubscribe(trimmed)
       setEmail('')
 
@@ -130,6 +141,11 @@ export default function Footer({ onSubscribe }) {
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     <span>Subscribing...</span>
                   </>
+                ) : status === 'already_subscribed' ? (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Already Subscribed</span>
+                  </>
                 ) : status === 'success' ? (
                   <>
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -145,13 +161,19 @@ export default function Footer({ onSubscribe }) {
             {message && (
               <div
                 className={`mt-2.5 text-[11px] font-medium flex items-start gap-1.5 ${
-                  status === 'error' ? 'text-rose-400' : 'text-emerald-400'
+                  status === 'error'
+                    ? 'text-rose-400'
+                    : status === 'already_subscribed'
+                    ? 'text-amber-400'
+                    : 'text-emerald-400'
                 }`}
               >
                 {status === 'error' ? (
-                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-rose-400" />
+                ) : status === 'already_subscribed' ? (
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-400" />
                 ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-emerald-400" />
                 )}
                 <span>{message}</span>
               </div>

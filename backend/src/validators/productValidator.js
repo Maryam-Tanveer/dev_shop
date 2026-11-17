@@ -2,13 +2,18 @@ import Joi from 'joi'
 
 export const productQuerySchema = {
   query: Joi.object({
-    category: Joi.string().trim().allow(''),
-    brand: Joi.string().trim().allow(''),
-    q: Joi.string().trim().allow(''),
+    category: Joi.string().trim().allow('', null).optional(),
+    brand: Joi.string().trim().allow('', null).optional(),
+    brands: Joi.string().trim().allow('', null).optional(),
+    minPrice: Joi.alternatives().try(Joi.number().min(0), Joi.string().trim().allow('', null)).optional(),
+    maxPrice: Joi.alternatives().try(Joi.number().min(0), Joi.string().trim().allow('', null)).optional(),
+    size: Joi.string().trim().allow('', null).optional(),
+    sizes: Joi.string().trim().allow('', null).optional(),
+    q: Joi.string().trim().allow('', null).optional(),
     page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(50),
-    sort: Joi.string().valid('price_asc', 'price_desc', 'newest', 'rating').optional(),
-  }),
+    limit: Joi.number().integer().min(1).max(200).default(100),
+    sort: Joi.string().trim().allow('', null).optional(),
+  }).unknown(true),
 }
 
 export const productIdParamSchema = {

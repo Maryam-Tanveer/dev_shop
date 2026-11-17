@@ -20,8 +20,12 @@ import {
   updateProductSchema,
 } from '../validators/productValidator.js'
 import { priceCartSchema } from '../validators/cartValidator.js'
+import reviewRoutes from './reviewRoutes.js'
 
 const router = express.Router()
+
+// Reviews sub-resource
+router.use('/:productId/reviews', reviewRoutes)
 
 // Public product endpoints
 router.get('/', validate(productQuerySchema), getProducts)

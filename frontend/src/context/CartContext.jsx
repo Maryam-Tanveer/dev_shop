@@ -273,11 +273,11 @@ export function CartProvider({ children }) {
         const itemVariantKey = createVariantKey(item.productId, item.size, item.colorway)
 
         if (typeof identifier === 'string') {
-          // If identifier matches the variant compound key or cartItemId
           if (itemVariantKey === identifier) return false
-          // If identifier is exact match
+          if (item.productId === identifier) return false
+          if (item.id === identifier) return false
+          if (item.cartItemId === identifier) return false
           if (identifier.includes('::') && itemVariantKey === identifier) return false
-          // If caller passed cartItemId
           if (identifier === `${item.productId}::${item.size}::${item.colorway}`) return false
         } else if (identifier && typeof identifier === 'object') {
           const targetKey = createVariantKey(
@@ -286,6 +286,7 @@ export function CartProvider({ children }) {
             identifier.colorway
           )
           if (itemVariantKey === targetKey) return false
+          if ((identifier.productId || identifier.id) === item.productId && (!identifier.size || identifier.size === item.size)) return false
         }
 
         return true
@@ -308,9 +309,14 @@ export function CartProvider({ children }) {
         const itemVariantKey = createVariantKey(item.productId, item.size, item.colorway)
         const matches =
           typeof identifier === 'string'
-            ? itemVariantKey === identifier || identifier === `${item.productId}::${item.size}::${item.colorway}`
+            ? itemVariantKey === identifier ||
+              identifier === `${item.productId}::${item.size}::${item.colorway}` ||
+              item.productId === identifier ||
+              item.id === identifier ||
+              item.cartItemId === identifier
             : identifier && typeof identifier === 'object'
-            ? itemVariantKey === createVariantKey(identifier.productId || identifier.id, identifier.size, identifier.colorway)
+            ? itemVariantKey === createVariantKey(identifier.productId || identifier.id, identifier.size, identifier.colorway) ||
+              ((identifier.productId || identifier.id) === item.productId && (!identifier.size || identifier.size === item.size))
             : false
 
         if (matches) {

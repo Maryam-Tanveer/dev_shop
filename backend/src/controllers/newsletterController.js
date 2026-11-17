@@ -2,7 +2,7 @@ import Subscriber from '../models/Subscriber.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 import { connectDB } from '../config/db.js'
-import { sendNewsletterWelcomeEmail } from '../services/emailService.js'
+import { sendNewsletterWelcomeEmail, sendNewsletterBroadcastEmail } from '../services/emailService.js'
 
 /**
  * POST /api/newsletter/subscribe
@@ -75,5 +75,40 @@ export const getSubscriberCount = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     count,
+  })
+})
+
+/**
+ * POST /api/newsletter/broadcast
+ * Broadcast a sale or discount promo to all active newsletter subscribers
+ */
+export const broadcastNewsletter = asyncHandler(async (req, res) => {
+  const { subject, title, discountPercent, promoCode, description, ctaUrl } = req.body
+
+  await connectDB()
+  const subscribers = await Subscriber.find({ status: 'active' }).select('email')
+
+  if (!subscribers.length) {
+    return res.json({
+      success: true,
+      message: 'No active subscribers found in database.',
+      count: 0,
+    })
+  }
+
+  const result = await sendNewsletterBroadcastEmail({
+    subscribers,
+    subject,
+    title,
+    discountPercent,
+    promoCode,
+    description,
+    ctaUrl,
+  })
+
+  res.json({
+    success: true,
+    message: `Discount campaign successfully dispatched to ${result.sent} subscriber(s)!`,
+    data: result,
   })
 })

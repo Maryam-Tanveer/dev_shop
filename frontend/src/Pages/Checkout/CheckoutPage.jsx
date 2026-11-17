@@ -10,7 +10,6 @@ import ShippingAddressCard from '../../Components/Checkout/ShippingAddressCard'
 import ShippingMethodCard from '../../Components/Checkout/ShippingMethodCard'
 import OrderBreakdownCard from '../../Components/Checkout/OrderBreakdownCard'
 import PaymentMethodCard from '../../Components/Checkout/PaymentMethodCard'
-import AntiCounterfeitPolicyCard from '../../Components/Checkout/AntiCounterfeitPolicyCard'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
@@ -56,6 +55,13 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     email: currentUser?.email || '',
     phone: currentUser?.phone || '',
   })
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('canceled') === 'true') {
+      showToast('Stripe checkout session was canceled.')
+    }
+  }, [])
 
   useEffect(() => {
     if (currentUser) {
@@ -142,6 +148,9 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
         quantity: Math.max(1, parseInt(it.quantity || it.qty || 1, 10)),
         size: it.size || 'Standard',
         colorway: it.colorway || it.color || 'Default',
+        title: it.title || it.name,
+        price: it.price,
+        image: it.image,
       })),
       shippingAddress: {
         firstName,
@@ -160,19 +169,42 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
 
     setIsProcessing(true)
 
-    const paymentLabel = isCod
-      ? 'Cash on Delivery'
-      : `Credit/Debit Card (${paymentDetails?.cardDetails?.cardBrand || 'Card'} •••• ${paymentDetails?.cardDetails?.cardLast4 || '4242'})`
+    if (!isCod) {
+      // 100% REAL STRIPE CHECKOUT INTEGRATION
+      showToast('Connecting to Stripe secure checkout...')
+      try {
+        const stripeRes = await api.createCheckoutSession(checkoutPayload)
+        if (stripeRes?.url) {
+          showToast('Redirecting to Stripe secure checkout...')
+          try {
+            sessionStorage.setItem(
+              'devshop_pending_stripe_order',
+              JSON.stringify({
+                orderNumber: stripeRes.orderNumber,
+                sessionId: stripeRes.sessionId,
+              })
+            )
+          } catch {}
 
-    const paymentMethodApi = isCod ? 'cod' : 'credit-card'
+          // Redirect to Stripe's official hosted checkout
+          window.location.href = stripeRes.url
+          return
+        }
+        throw new Error(stripeRes?.message || 'Failed to initialize Stripe checkout session.')
+      } catch (err) {
+        console.error('[Stripe Checkout Error]:', err)
+        showToast(err.message || 'Stripe checkout could not be initiated. Please try again.')
+        setIsProcessing(false)
+        return
+      }
+    }
 
-    showToast(isCod ? 'Authorizing COD drop dispatch...' : 'Processing encrypted card terminal payment...')
-
+    // Cash on Delivery (COD) Flow
+    showToast('Authorizing COD drop dispatch...')
     try {
       const res = await api.createOrder({
         ...checkoutPayload,
-        paymentMethod: paymentMethodApi,
-        cardDetails: paymentDetails?.cardDetails || null,
+        paymentMethod: 'cod',
       })
 
       const createdOrder = res?.data || res?.order || res
@@ -181,7 +213,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
         const orderNum = createdOrder.orderNumber || createdOrder._id
         const confirmedOrder = {
           ...createdOrder,
-          paymentMethod: paymentLabel,
+          paymentMethod: 'Cash on Delivery',
         }
 
         try {
@@ -375,8 +407,6 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
                 onPlaceOrder={handlePlaceOrder}
                 isProcessing={isProcessing}
               />
-
-              <AntiCounterfeitPolicyCard />
             </div>
           </div>
         </div>

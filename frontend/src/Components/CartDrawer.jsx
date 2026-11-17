@@ -1,16 +1,38 @@
-import { X, ShoppingBag, Trash2, ArrowRight } from 'lucide-react'
+import { X, ShoppingBag, Trash2, ArrowRight, Minus, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useCart } from '../context/CartContext'
 
 export default function CartDrawer({
   isOpen,
   onClose,
-  items = [],
+  items: propItems,
   onRemoveItem,
   onCheckout
 }) {
   const navigate = useNavigate()
+  const { items: contextItems, updateQuantity, removeFromCart } = useCart()
+  const items = propItems || contextItems || []
 
   if (!isOpen) return null
+
+  const handleUpdateQty = (item, newQty) => {
+    if (newQty <= 0) {
+      if (onRemoveItem) onRemoveItem(item.cartItemId || item.id)
+      else if (removeFromCart) removeFromCart(item.cartItemId || item.id || item)
+      return
+    }
+    if (updateQuantity) {
+      updateQuantity(item.cartItemId || item.id || item, newQty)
+    }
+  }
+
+  const handleRemove = (item) => {
+    if (onRemoveItem) {
+      onRemoveItem(item.cartItemId || item.id)
+    } else if (removeFromCart) {
+      removeFromCart(item.cartItemId || item.id || item)
+    }
+  }
 
   const handleProceedToCheckout = () => {
     if (onClose) onClose()
@@ -81,16 +103,40 @@ export default function CartDrawer({
                         {item.colorway}{item.size ? ` • ${item.size}` : ''}
                       </p>
                     )}
-                    <p className="text-xs font-extrabold text-neutral-900 mt-0.5">
-                      ${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
-                      {(item.quantity || 1) > 1 && (
-                        <span className="text-neutral-500 font-normal ml-1">× {item.quantity}</span>
-                      )}
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs font-black text-neutral-900">
+                        ${((Number(item.price) || 0) * (item.quantity || 1)).toFixed(2)}
+                      </p>
+
+                      {/* Quantity Stepper */}
+                      <div className="inline-flex items-center border border-neutral-200 rounded-full bg-neutral-50 px-1 py-0.5 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQty(item, (item.quantity || 1) - 1)}
+                          aria-label="Decrease quantity"
+                          className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 rounded-full transition font-bold cursor-pointer"
+                          title="Decrease"
+                        >
+                          <Minus className="w-2.5 h-2.5" />
+                        </button>
+                        <span className="w-6 text-center text-xs font-black text-neutral-900">
+                          {item.quantity || 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQty(item, (item.quantity || 1) + 1)}
+                          aria-label="Increase quantity"
+                          className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 rounded-full transition font-bold cursor-pointer"
+                          title="Increase"
+                        >
+                          <Plus className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => onRemoveItem && onRemoveItem(item.cartItemId || item.id)}
+                    onClick={() => handleRemove(item)}
                     aria-label={`Remove ${item.title} from cart`}
                     className="p-1.5 rounded-lg hover:bg-rose-50 text-neutral-400 hover:text-rose-600 transition cursor-pointer"
                   >

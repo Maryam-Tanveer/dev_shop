@@ -168,10 +168,10 @@ export default function OrderConfirmationPage({ onNavigate, onSelectProduct }) {
               <PackageX className="w-8 h-8 text-neutral-400" />
             </div>
             <h2 className="text-2xl font-black text-neutral-900 tracking-tight mb-2">
-              Order nahi mila
+              Order Not Found
             </h2>
             <p className="text-xs text-neutral-500 leading-relaxed mb-6 font-medium">
-              Humein is session ya ID ka koi confirmed order record nahi mila. Agar aap ne payment ki hai to apna email check karein ya customer concierge se rabta karein.
+              We could not locate a confirmed order record for this session. If you have completed payment, please check your email inbox for your receipt or contact our 24/7 concierge support.
             </p>
             <button
               onClick={() => (onNavigate ? onNavigate('PRODUCTS') : navigate('/products'))}

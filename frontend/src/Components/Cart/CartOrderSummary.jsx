@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldCheck, RotateCcw, Lock, Info } from 'lucide-react'
+import { ArrowRight, Info } from 'lucide-react'
 
 export default function CartOrderSummary({
   subtotal: propSubtotal = 0,
@@ -79,33 +79,6 @@ export default function CartOrderSummary({
         {/* Payment Methods */}
         <div className="text-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest pt-4 pb-2">
           Apple Pay • Google Pay • Visa • Mastercard • Klarna 4x
-        </div>
-
-        {/* 3 Trust Strip Cards */}
-        <div className="space-y-2 pt-3 border-t border-neutral-100">
-          <div className="flex items-start gap-3 bg-[#fcfbfa] p-3 rounded-2xl border border-neutral-100">
-            <ShieldCheck className="w-4 h-4 text-[#c81d25] flex-shrink-0 mt-0.5" />
-            <div>
-              <h5 className="text-xs font-bold text-neutral-900">100% Authentic Guarantee</h5>
-              <p className="text-[10px] text-neutral-400">Verified deadstock by sneaker experts</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 bg-[#fcfbfa] p-3 rounded-2xl border border-neutral-100">
-            <RotateCcw className="w-4 h-4 text-[#c81d25] flex-shrink-0 mt-0.5" />
-            <div>
-              <h5 className="text-xs font-bold text-neutral-900">30-Day Free Returns</h5>
-              <p className="text-[10px] text-neutral-400">Hassle-free labels & instant store credit</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 bg-[#fcfbfa] p-3 rounded-2xl border border-neutral-100">
-            <Lock className="w-4 h-4 text-[#c81d25] flex-shrink-0 mt-0.5" />
-            <div>
-              <h5 className="text-xs font-bold text-neutral-900">Encrypted Bank-Grade Checkout</h5>
-              <p className="text-[10px] text-neutral-400">Payment details never stored on servers</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
