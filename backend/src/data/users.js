@@ -124,14 +124,17 @@ export const updateUserProfile = (id, updates) => {
   return sanitizeUser(user)
 }
 
-export const changeUserPassword = async (id, currentPassword, newPassword) => {
+export const changeUserPassword = async (id, currentPassword, newPassword, isGoogleNoPassword = false) => {
   const user = findUserById(id)
   if (!user) return { success: false, error: 'User not found' }
 
-  const isMatch = await bcrypt.compare(currentPassword, user.passwordHash)
-  if (!isMatch) return { success: false, error: 'Current password is incorrect' }
+  if (!isGoogleNoPassword) {
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!isMatch) return { success: false, error: 'Current password is incorrect' }
+  }
 
   user.passwordHash = await bcrypt.hash(newPassword, 10)
+  user.hasCustomPassword = true
   return { success: true }
 }
 

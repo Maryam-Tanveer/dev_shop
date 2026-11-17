@@ -112,51 +112,78 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
 
 /**
  * PUT /api/user/password
- * Change password by verifying current password
+ * Change or set password.
+ * If user signed up via Google and has no custom password, currentPassword is not required.
  */
 export const changePassword = asyncHandler(async (req, res, next) => {
   const userId = req.user.id
   const { currentPassword, newPassword } = req.body
   const dbStatus = getDBStatus()
 
-  if (!currentPassword || !newPassword) {
-    return next(new AppError('Current password and new password are required', 400))
-  }
-
-  if (newPassword.length < 8) {
-    return next(new AppError('New password must be at least 8 characters long', 400))
+  if (!newPassword || newPassword.length < 6) {
+    return next(new AppError('New password must be at least 6 characters long', 400))
   }
 
   if (dbStatus.connected) {
     try {
       const user = await User.findById(userId).select('+password')
       if (user) {
-        const isMatch = await user.matchPassword(currentPassword)
-        if (!isMatch) {
-          return next(new AppError('Current password is incorrect', 400))
+        // Detect if user signed in via Google or lacks custom password
+        const isGoogleNoPassword =
+          user.authProvider === 'google' ||
+          user.memberTier === 'GOOGLE AUTH MEMBER' ||
+          !user.hasCustomPassword
+
+        // If user already has a custom password, verify current password
+        if (!isGoogleNoPassword) {
+          if (!currentPassword) {
+            return next(new AppError('Current password is required', 400))
+          }
+          const isMatch = await user.matchPassword(currentPassword)
+          if (!isMatch) {
+            return next(new AppError('Current password is incorrect', 400))
+          }
         }
 
         user.password = newPassword
+        user.hasCustomPassword = true
         await user.save()
 
         return res.json({
           success: true,
-          message: 'Password changed successfully',
+          message: isGoogleNoPassword
+            ? 'Account password set successfully! You can now log in with email and password.'
+            : 'Password changed successfully',
+          hasCustomPassword: true,
+          hasPassword: true,
         })
       }
     } catch (e) {
-      return next(new AppError(e.message || 'Failed to change password', 500))
+      return next(new AppError(e.message || 'Failed to update password', 500))
     }
   }
 
-  const result = await changeUserPassword(userId, currentPassword, newPassword)
+  const isGoogleNoPassword =
+    req.user?.authProvider === 'google' ||
+    req.user?.memberTier === 'GOOGLE AUTH MEMBER' ||
+    !req.user?.hasCustomPassword
+
+  if (!isGoogleNoPassword && !currentPassword) {
+    return next(new AppError('Current password is required', 400))
+  }
+
+  const result = await changeUserPassword(userId, currentPassword, newPassword, isGoogleNoPassword)
   if (!result.success) {
-    return next(new AppError(result.error || 'Failed to change password', 400))
+    return next(new AppError(result.error || 'Failed to update password', 400))
   }
 
   res.json({
     success: true,
-    message: 'Password changed successfully',
+    message: isGoogleNoPassword
+      ? 'Account password set successfully! You can now log in with email and password.'
+      : 'Password changed successfully',
+    hasCustomPassword: true,
+    hasPassword: true,
   })
 })
 

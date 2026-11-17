@@ -199,7 +199,13 @@ export const register = asyncHandler(async (req, res, next) => {
         new AppError('An account with this email is already registered. Please sign in instead.', 409)
       )
     }
-    const newUser = await User.create({ name: trimmedName, email: normalizedEmail, password })
+    const newUser = await User.create({
+      name: trimmedName,
+      email: normalizedEmail,
+      password,
+      authProvider: 'local',
+      hasCustomPassword: true,
+    })
     const token = generateToken(newUser)
     const safeUser = {
       id: newUser._id.toString(),
@@ -208,6 +214,9 @@ export const register = asyncHandler(async (req, res, next) => {
       role: newUser.role,
       avatar: newUser.avatar,
       tier: newUser.memberTier,
+      authProvider: 'local',
+      hasCustomPassword: true,
+      hasPassword: true,
     }
 
     res.cookie('token', token, getCookieOptions(req))
@@ -385,18 +394,27 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
           password: `google-oauth-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`,
           avatar: avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
           memberTier: 'GOOGLE AUTH MEMBER',
+          authProvider: 'google',
+          hasCustomPassword: false,
           role: 'member',
         })
       }
 
+      const isGoogle = dbUser.authProvider === 'google' || dbUser.memberTier === 'GOOGLE AUTH MEMBER'
+      const hasCustomPass = Boolean(dbUser.hasCustomPassword)
       const token = generateToken(dbUser)
       const safeUser = {
         id: dbUser._id.toString(),
         name: dbUser.name,
         email: dbUser.email,
+        phone: dbUser.phone || '',
+        bio: dbUser.bio || '',
         role: dbUser.role || 'member',
         avatar: dbUser.avatar,
         tier: dbUser.memberTier,
+        authProvider: isGoogle ? 'google' : 'local',
+        hasCustomPassword: hasCustomPass,
+        hasPassword: isGoogle ? hasCustomPass : true,
       }
 
       res.cookie('token', token, getCookieOptions(req))

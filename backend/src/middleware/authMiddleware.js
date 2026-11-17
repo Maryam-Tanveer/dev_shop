@@ -45,15 +45,22 @@ export const resolveUserById = async (id) => {
   try {
     const dbUser = await User.findById(id).lean()
     if (dbUser) {
+      const isGoogle = dbUser.authProvider === 'google' || dbUser.memberTier === 'GOOGLE AUTH MEMBER'
+      const hasCustomPass = Boolean(dbUser.hasCustomPassword)
       return {
         id: dbUser._id.toString(),
         name: dbUser.name,
         email: dbUser.email,
+        phone: dbUser.phone || '',
+        bio: dbUser.bio || '',
         role: dbUser.role || 'member',
         avatar: dbUser.avatar,
         memberTier: dbUser.memberTier,
         tier: dbUser.memberTier,
         addresses: dbUser.addresses || [],
+        authProvider: isGoogle ? 'google' : (dbUser.authProvider || 'local'),
+        hasCustomPassword: hasCustomPass,
+        hasPassword: isGoogle ? hasCustomPass : true,
       }
     }
   } catch {

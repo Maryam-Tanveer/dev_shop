@@ -28,6 +28,11 @@ export default function ProfileSecurityCard({ onToast }) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isChangingPassword, setIsChangingPassword] = useState(false)
 
+  const isGoogleWithoutPassword =
+    currentUser?.hasPassword === false ||
+    ((currentUser?.authProvider === 'google' || currentUser?.memberTier === 'GOOGLE AUTH MEMBER') &&
+      !currentUser?.hasCustomPassword)
+
   useEffect(() => {
     if (currentUser) {
       setName(currentUser.name || '')
@@ -74,7 +79,7 @@ export default function ProfileSecurityCard({ onToast }) {
   // Handle Password Change
   const handlePasswordSubmit = async (e) => {
     e.preventDefault()
-    if (!currentPassword) {
+    if (!isGoogleWithoutPassword && !currentPassword) {
       notify('Please enter your current password.')
       return
     }
@@ -90,20 +95,28 @@ export default function ProfileSecurityCard({ onToast }) {
     setIsChangingPassword(true)
     try {
       const res = await api.changePassword({
-        currentPassword,
+        currentPassword: isGoogleWithoutPassword ? '' : currentPassword,
         newPassword,
       })
 
       if (res && res.success) {
-        notify('Password changed successfully!')
+        notify(
+          isGoogleWithoutPassword
+            ? 'Account password set successfully! You can now log in with email and password.'
+            : 'Password changed successfully!'
+        )
+        updateCurrentUser({
+          hasPassword: true,
+          hasCustomPassword: true,
+        })
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
       } else {
-        notify(res?.error || 'Failed to change password.')
+        notify(res?.error || res?.message || 'Failed to update password.')
       }
     } catch (err) {
-      notify(err.message || 'Error changing password.')
+      notify(err.message || 'Error updating password.')
     } finally {
       setIsChangingPassword(false)
     }
@@ -275,29 +288,53 @@ export default function ProfileSecurityCard({ onToast }) {
             </div>
             <div>
               <h2 className="text-lg font-black text-neutral-900 tracking-tight">Security & Credentials</h2>
-              <p className="text-xs text-neutral-500">Update your account authentication password securely</p>
+              <p className="text-xs text-neutral-500">
+                {isGoogleWithoutPassword
+                  ? 'You signed in via Google. Set an account password to enable direct email & password login.'
+                  : 'Update your account authentication password securely'}
+              </p>
             </div>
           </div>
+          {isGoogleWithoutPassword && (
+            <span className="text-[10px] font-extrabold px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full uppercase tracking-wider">
+              Google Account
+            </span>
+          )}
         </div>
 
+        {isGoogleWithoutPassword && (
+          <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-900 mb-5">
+            <Shield className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] leading-relaxed">
+              <strong>Google Sign-In Connected:</strong> Your account does not have a previous password. You do not need to provide a current password—simply enter a new password below to set your account credentials.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
-                Current Password *
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:border-[#c81d25] transition"
-                />
+          <div
+            className={`grid gap-4 ${
+              isGoogleWithoutPassword ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'
+            }`}
+          >
+            {!isGoogleWithoutPassword && (
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
+                  Current Password *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required={!isGoogleWithoutPassword}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:border-[#c81d25] transition"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
@@ -338,10 +375,18 @@ export default function ProfileSecurityCard({ onToast }) {
             <button
               type="submit"
               disabled={isChangingPassword}
-              className="px-6 py-3 rounded-full bg-neutral-900 hover:bg-[#c81d25] text-white text-xs font-extrabold uppercase tracking-wider transition shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
+              className="px-6 py-3 rounded-full bg-neutral-900 hover:bg-[#c81d25] text-white text-xs font-extrabold uppercase tracking-wider transition shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <Shield className="w-4 h-4" />
-              <span>{isChangingPassword ? 'Updating Password...' : 'Update Password'}</span>
+              <span>
+                {isChangingPassword
+                  ? isGoogleWithoutPassword
+                    ? 'Setting Password...'
+                    : 'Updating Password...'
+                  : isGoogleWithoutPassword
+                  ? 'Set Account Password'
+                  : 'Update Password'}
+              </span>
             </button>
           </div>
         </form>

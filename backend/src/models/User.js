@@ -114,6 +114,15 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+    hasCustomPassword: {
+      type: Boolean,
+      default: false,
+    },
     addresses: [addressSchema],
     wishlist: {
       type: [String],
