@@ -7,9 +7,6 @@ import {
   Truck,
   ArrowRight,
   Sparkles,
-  Copy,
-  Check,
-  Info,
 } from 'lucide-react'
 
 export default function PaymentMethodCard({
@@ -18,14 +15,6 @@ export default function PaymentMethodCard({
   isProcessing = false,
 }) {
   const [paymentType, setPaymentType] = useState('stripe') // 'stripe' | 'cod'
-  const [copied, setCopied] = useState(false)
-
-  const handleCopyCard = (e) => {
-    e.stopPropagation()
-    navigator.clipboard?.writeText('4242424242424242')
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -55,10 +44,10 @@ export default function PaymentMethodCard({
           </div>
         </div>
 
-        {/* Free Test Mode Badge */}
+        {/* PCI-DSS Badge */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>100% Free Sandbox</span>
+          <span>PCI-DSS Level 1</span>
         </div>
       </div>
 
@@ -66,7 +55,7 @@ export default function PaymentMethodCard({
       <div className="mb-5 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-start gap-2.5 text-xs text-neutral-600">
         <Lock className="w-4 h-4 text-[#635BFF] flex-shrink-0 mt-0.5" />
         <p className="text-[11px] leading-relaxed">
-          <strong className="text-neutral-900">Stripe Live Sandbox Mode.</strong> Test real-world checkout workflows for free without entering personal bank cards.
+          <strong className="text-neutral-900">100% Encrypted Stripe Payment Gateway.</strong> Transactions are authenticated directly via Stripe's PCI-DSS Level 1 certified payment infrastructure.
         </p>
       </div>
 
@@ -104,9 +93,6 @@ export default function PaymentMethodCard({
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-[#635BFF] text-white">
                     stripe
                   </span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                    Free Demo
-                  </span>
                 </div>
                 <span className="text-[10px] text-neutral-500 font-medium">
                   Cards, Apple Pay, Google Pay • Instant 3D-Secure
@@ -131,67 +117,24 @@ export default function PaymentMethodCard({
           {/* Details dropdown when selected */}
           {paymentType === 'stripe' && (
             <div className="px-4 pb-4 pt-2 border-t border-neutral-200/80 bg-white">
-              <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/70 text-xs space-y-3">
+              <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/70 text-xs space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-700">
                   <span className="flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#635BFF]" />
-                    Official Stripe Sandbox (Rs. 0 Cost)
+                    Official Stripe Payment Terminal
                   </span>
                   <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    Live & Active
+                    256-Bit SSL Encrypted
                   </span>
                 </div>
 
                 <p className="text-[11px] text-neutral-600 leading-relaxed">
-                  Clicking below will securely redirect you to Stripe's hosted checkout page. You can complete the payment using Stripe's official free demo card:
+                  Upon clicking below, you will be securely redirected to Stripe's payment portal where you can enter your card details (Card Number, Expiry, CVV) or checkout instantly with Apple Pay / Google Pay.
                 </p>
 
-                {/* Free Demo Card Helper Box */}
-                <div className="p-3 rounded-lg bg-white border border-neutral-200/90 shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-500">
-                      Stripe Free Test Card
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCopyCard}
-                      className="flex items-center gap-1 text-[10px] font-bold text-[#635BFF] hover:text-[#5349e4] bg-[#635BFF]/10 px-2 py-0.5 rounded transition cursor-pointer"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          <span className="text-emerald-600 font-semibold">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>Copy Card</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center pt-1 font-mono text-[11px]">
-                    <div className="bg-neutral-50 p-1.5 rounded border border-neutral-100">
-                      <div className="text-[9px] text-neutral-400 font-sans uppercase">Card Number</div>
-                      <div className="font-bold text-neutral-800">4242 •••• 4242</div>
-                    </div>
-                    <div className="bg-neutral-50 p-1.5 rounded border border-neutral-100">
-                      <div className="text-[9px] text-neutral-400 font-sans uppercase">Expiry</div>
-                      <div className="font-bold text-neutral-800">12 / 28</div>
-                    </div>
-                    <div className="bg-neutral-50 p-1.5 rounded border border-neutral-100">
-                      <div className="text-[9px] text-neutral-400 font-sans uppercase">CVC</div>
-                      <div className="font-bold text-neutral-800">123</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-1.5 text-[10px] text-neutral-500 pt-0.5">
-                  <Info className="w-3.5 h-3.5 text-[#635BFF] flex-shrink-0 mt-0.5" />
-                  <span>
-                    Zero real money will be charged. Upon completion, Stripe will redirect back with verified manifest and dispatch a real confirmation receipt.
-                  </span>
+                <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 pt-1 font-medium">
+                  <Lock className="w-3 h-3 text-[#635BFF]" />
+                  <span>All payment details are entered directly and securely by you on Stripe.</span>
                 </div>
               </div>
             </div>
@@ -225,7 +168,7 @@ export default function PaymentMethodCard({
                 Cash on Delivery (COD)
               </span>
               <span className="text-[10px] text-neutral-500 font-medium">
-                Inspect items upon arrival before payment • 100% Free
+                Inspect items upon arrival before payment
               </span>
             </div>
           </div>
@@ -265,10 +208,10 @@ export default function PaymentMethodCard({
       <div className="text-center pt-2">
         <div className="flex items-center justify-center gap-1.5 text-[10px] font-black text-neutral-800 uppercase tracking-wider mb-1">
           <ShieldCheck className="w-3.5 h-3.5 text-[#635BFF]" />
-          <span>PCI-DSS LEVEL 1 COMPLIANT • ZERO PAYMENT FEES</span>
+          <span>PCI-DSS LEVEL 1 COMPLIANT • END-TO-END 256-BIT ENCRYPTION</span>
         </div>
         <p className="text-[10px] text-neutral-400 max-w-sm mx-auto leading-relaxed font-medium">
-          Powered by Stripe Sandbox. No personal credit or debit cards required.
+          Powered by Stripe. Your payment credentials are encrypted and never stored on our servers.
         </p>
       </div>
     </div>
