@@ -83,8 +83,8 @@ export default function ProfileSecurityCard({ onToast }) {
       notify('Please enter your current password.')
       return
     }
-    if (!newPassword || newPassword.length < 6) {
-      notify('New password must be at least 6 characters long.')
+    if (!newPassword || newPassword.length < 8) {
+      notify('New password must be at least 8 characters long.')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -347,7 +347,7 @@ export default function ProfileSecurityCard({ onToast }) {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 characters"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:border-[#c81d25] transition"
                 />
               </div>

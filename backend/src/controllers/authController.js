@@ -92,19 +92,40 @@ export const login = asyncHandler(async (req, res, next) => {
   try {
     const user = await User.findOne({ email: normalizedEmail }).select('+password')
     if (user) {
+      // If user registered with Google and has not set a custom password
+      const isGoogleWithoutPassword =
+        (user.authProvider === 'google' || user.memberTier === 'GOOGLE AUTH MEMBER') &&
+        !user.hasCustomPassword
+
+      if (isGoogleWithoutPassword) {
+        return next(
+          new AppError(
+            'This account was registered using Google Sign-In and does not have a password yet. Please click "Continue with Google" to sign in.',
+            400
+          )
+        )
+      }
+
       const isMatch = await user.matchPassword(password)
 
       if (!isMatch) {
         return next(new AppError('Incorrect password. Please verify your password and try again.', 401))
       }
+      const isGoogle = user.authProvider === 'google' || user.memberTier === 'GOOGLE AUTH MEMBER'
+      const hasCustomPass = Boolean(user.hasCustomPassword)
       const token = generateToken(user)
       const safeUser = {
         id: user._id.toString(),
         name: user.name,
         email: user.email,
+        phone: user.phone || '',
+        bio: user.bio || '',
         role: user.role,
         avatar: user.avatar,
         tier: user.memberTier,
+        authProvider: isGoogle ? 'google' : 'local',
+        hasCustomPassword: hasCustomPass,
+        hasPassword: isGoogle ? hasCustomPass : true,
       }
 
       // Set secure httpOnly cookie
@@ -195,8 +216,14 @@ export const register = asyncHandler(async (req, res, next) => {
   try {
     const existing = await User.findOne({ email: normalizedEmail })
     if (existing) {
+      const isGoogle = existing.authProvider === 'google' || existing.memberTier === 'GOOGLE AUTH MEMBER'
       return next(
-        new AppError('An account with this email is already registered. Please sign in instead.', 409)
+        new AppError(
+          isGoogle
+            ? 'An account with this email was registered via Google Sign-In. Please sign in using Google.'
+            : 'An account with this email is already registered. Please sign in instead.',
+          409
+        )
       )
     }
     const newUser = await User.create({

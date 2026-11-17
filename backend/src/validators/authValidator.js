@@ -31,7 +31,7 @@ export const loginSchema = {
       'string.empty': 'Password cannot be empty',
       'any.required': 'Password is required',
     }),
-  }),
+  }).unknown(true),
 }
 
 export const googleAuthSchema = {
@@ -46,6 +46,7 @@ export const googleAuthSchema = {
     googleId: Joi.string().trim().optional(),
   })
     .or('idToken', 'token', 'credential', 'accessToken')
+    .unknown(true)
     .messages({
       'object.missing': 'Google authentication token (idToken or accessToken) is required',
     }),
