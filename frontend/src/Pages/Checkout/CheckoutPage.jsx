@@ -169,42 +169,19 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
 
     setIsProcessing(true)
 
-    if (!isCod) {
-      // 100% REAL STRIPE CHECKOUT INTEGRATION
-      showToast('Connecting to Stripe secure checkout...')
-      try {
-        const stripeRes = await api.createCheckoutSession(checkoutPayload)
-        if (stripeRes?.url) {
-          showToast('Redirecting to Stripe secure checkout...')
-          try {
-            sessionStorage.setItem(
-              'devshop_pending_stripe_order',
-              JSON.stringify({
-                orderNumber: stripeRes.orderNumber,
-                sessionId: stripeRes.sessionId,
-              })
-            )
-          } catch {}
+    const paymentLabel = isCod
+      ? 'Cash on Delivery'
+      : `Credit/Debit Card (${paymentDetails?.cardDetails?.cardBrand || 'Card'} •••• ${paymentDetails?.cardDetails?.cardLast4 || '4242'})`
 
-          // Redirect to Stripe's official hosted checkout
-          window.location.href = stripeRes.url
-          return
-        }
-        throw new Error(stripeRes?.message || 'Failed to initialize Stripe checkout session.')
-      } catch (err) {
-        console.error('[Stripe Checkout Error]:', err)
-        showToast(err.message || 'Stripe checkout could not be initiated. Please try again.')
-        setIsProcessing(false)
-        return
-      }
-    }
+    const paymentMethodApi = isCod ? 'cod' : 'credit-card'
 
-    // Cash on Delivery (COD) Flow
-    showToast('Authorizing COD drop dispatch...')
+    showToast(isCod ? 'Authorizing COD drop dispatch...' : 'Processing encrypted card payment...')
+
     try {
       const res = await api.createOrder({
         ...checkoutPayload,
-        paymentMethod: 'cod',
+        paymentMethod: paymentMethodApi,
+        cardDetails: paymentDetails?.cardDetails || null,
       })
 
       const createdOrder = res?.data || res?.order || res
@@ -213,7 +190,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
         const orderNum = createdOrder.orderNumber || createdOrder._id
         const confirmedOrder = {
           ...createdOrder,
-          paymentMethod: 'Cash on Delivery',
+          paymentMethod: paymentLabel,
         }
 
         try {

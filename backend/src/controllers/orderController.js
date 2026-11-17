@@ -5,6 +5,7 @@ import AppError from '../utils/AppError.js'
 import { sendOrderReceiptEmail } from '../services/emailService.js'
 import { getAuthoritativeProduct } from './cartController.js'
 import { calcTotals } from '../utils/pricing.js'
+import { decrementInventoryForOrder } from './paymentController.js'
 
 export const IN_MEMORY_ORDERS = new Map()
 
@@ -226,6 +227,11 @@ export const createOrder = asyncHandler(async (req, res, next) => {
         console.warn('[RECEIPT EMAIL NOTICE] Background email dispatch:', err.message)
       })
   }
+
+  // Automated stock decrement
+  decrementInventoryForOrder(finalOrder).catch((err) =>
+    console.warn('[INVENTORY DECREMENT NOTICE]:', err.message)
+  )
 
   res.status(201).json({
     success: true,
