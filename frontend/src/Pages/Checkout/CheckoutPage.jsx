@@ -169,53 +169,63 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
 
     setIsProcessing(true)
 
-    const paymentLabel = isCod
-      ? 'Cash on Delivery'
-      : `Credit/Debit Card (${paymentDetails?.cardDetails?.cardBrand || 'Card'} •••• ${paymentDetails?.cardDetails?.cardLast4 || '4242'})`
+    if (isCod) {
+      showToast('Authorizing COD drop dispatch...')
+      try {
+        const res = await api.createOrder({
+          ...checkoutPayload,
+          paymentMethod: 'cod',
+        })
 
-    const paymentMethodApi = isCod ? 'cod' : 'credit-card'
-
-    showToast(isCod ? 'Authorizing COD drop dispatch...' : 'Processing encrypted card payment...')
-
-    try {
-      const res = await api.createOrder({
-        ...checkoutPayload,
-        paymentMethod: paymentMethodApi,
-        cardDetails: paymentDetails?.cardDetails || null,
-      })
-
-      const createdOrder = res?.data || res?.order || res
-      if (createdOrder && (createdOrder.orderNumber || createdOrder._id)) {
-        clearCart()
-        const orderNum = createdOrder.orderNumber || createdOrder._id
-        const confirmedOrder = {
-          ...createdOrder,
-          paymentMethod: paymentLabel,
-        }
-
-        try {
-          sessionStorage.setItem('devshop_last_order', JSON.stringify(confirmedOrder))
-        } catch {}
-
-        showToast('Payment confirmed! Manifest generated.')
-        setTimeout(() => {
-          if (onNavigate) {
-            onNavigate('ORDER_CONFIRMATION')
-          } else {
-            navigate(`/order-confirmation?order_id=${encodeURIComponent(orderNum)}`, {
-              state: {
-                order: confirmedOrder,
-              },
-            })
+        const createdOrder = res?.data || res?.order || res
+        if (createdOrder && (createdOrder.orderNumber || createdOrder._id)) {
+          clearCart()
+          const orderNum = createdOrder.orderNumber || createdOrder._id
+          const confirmedOrder = {
+            ...createdOrder,
+            paymentMethod: 'Cash on Delivery',
           }
-        }, 400)
-        return
+
+          try {
+            sessionStorage.setItem('devshop_last_order', JSON.stringify(confirmedOrder))
+          } catch {}
+
+          showToast('Payment confirmed! Manifest generated.')
+          setTimeout(() => {
+            if (onNavigate) {
+              onNavigate('ORDER_CONFIRMATION')
+            } else {
+              navigate(`/order-confirmation?order_id=${encodeURIComponent(orderNum)}`, {
+                state: {
+                  order: confirmedOrder,
+                },
+              })
+            }
+          }, 400)
+          return
+        }
+        throw new Error(res?.message || 'Failed to place order.')
+      } catch (err) {
+        console.error('[Checkout Error]:', err)
+        showToast(err.message || 'Payment processing failed. Please check details and try again.')
+        setIsProcessing(false)
       }
-      throw new Error(res?.message || 'Failed to place order.')
-    } catch (err) {
-      console.error('[Checkout Error]:', err)
-      showToast(err.message || 'Payment processing failed. Please check details and try again.')
-      setIsProcessing(false)
+    } else {
+      // Stripe Hosted Checkout Session Redirect
+      showToast('Connecting securely to Stripe...')
+      try {
+        const sessionRes = await api.createCheckoutSession(checkoutPayload)
+        const redirectUrl = sessionRes?.url || sessionRes?.data?.url
+        if (redirectUrl) {
+          window.location.href = redirectUrl
+          return
+        }
+        throw new Error(sessionRes?.message || 'Failed to initialize Stripe checkout session.')
+      } catch (err) {
+        console.error('[Stripe Checkout Error]:', err)
+        showToast(err.message || 'Failed to initialize Stripe checkout. Please try again.')
+        setIsProcessing(false)
+      }
     }
   }
 
