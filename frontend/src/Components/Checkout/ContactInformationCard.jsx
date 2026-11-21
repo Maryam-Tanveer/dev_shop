@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Contact, Check, AlertCircle } from 'lucide-react'
+import { formatPakistanPhone } from '../../utils/geoData'
 
 export default function ContactInformationCard({
   email = '',
@@ -10,7 +11,7 @@ export default function ContactInformationCard({
   onChange,
 }) {
   const [emailVal, setEmailVal] = useState(email)
-  const [phoneVal, setPhoneVal] = useState(phone)
+  const [phoneVal, setPhoneVal] = useState(phone ? formatPakistanPhone(phone) : '')
   const [keepUpdated, setKeepUpdated] = useState(true)
 
   useEffect(() => {
@@ -18,7 +19,9 @@ export default function ContactInformationCard({
   }, [email])
 
   useEffect(() => {
-    if (phone) setPhoneVal(phone)
+    if (phone) {
+      setPhoneVal(formatPakistanPhone(phone))
+    }
   }, [phone])
 
   const handleEmailChange = (val) => {
@@ -27,10 +30,23 @@ export default function ContactInformationCard({
     if (onChange) onChange({ email: val, phone: phoneVal })
   }
 
-  const handlePhoneChange = (val) => {
-    setPhoneVal(val)
+  const handlePhoneChange = (raw) => {
+    if (!raw || raw.trim() === '+' || raw.trim() === '+92') {
+      setPhoneVal('')
+      if (clearFieldError) clearFieldError('phone')
+      if (onChange) onChange({ email: emailVal, phone: '' })
+      return
+    }
+    const formatted = formatPakistanPhone(raw)
+    setPhoneVal(formatted)
     if (clearFieldError) clearFieldError('phone')
-    if (onChange) onChange({ email: emailVal, phone: val })
+    if (onChange) onChange({ email: emailVal, phone: formatted })
+  }
+
+  const handlePhoneFocus = () => {
+    if (!phoneVal) {
+      setPhoneVal('+92 ')
+    }
   }
 
   return (
@@ -86,19 +102,25 @@ export default function ContactInformationCard({
 
         {/* Phone Number */}
         <div>
-          <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-            Phone Number for Drop Dispatch <span className="text-[#c81d25]">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider">
+              Phone Number <span className="text-[#c81d25]">*</span>
+            </label>
+            <span className="text-[10px] font-mono font-bold text-neutral-400">
+              Format: +92 300 1234567
+            </span>
+          </div>
           <input
             type="tel"
             value={phoneVal}
+            onFocus={handlePhoneFocus}
             onChange={(e) => handlePhoneChange(e.target.value)}
-            className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
+            className={`w-full font-mono rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
               errors.phone
                 ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
                 : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
             }`}
-            placeholder="e.g. 03001234567 or +92 300 1234567"
+            placeholder="+92 300 1234567"
           />
           {errors.phone && (
             <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">

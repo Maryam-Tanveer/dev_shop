@@ -355,3 +355,191 @@ export function getStatesForCountry(country) {
 
   return STATES_BY_COUNTRY[norm] || []
 }
+
+/**
+ * Complete directory of Pakistan cities grouped strictly by Province
+ */
+export const CITIES_BY_PROVINCE_PK = {
+  punjab: [
+    'Lahore', 'Faisalabad', 'Rawalpindi', 'Multan', 'Gujranwala', 'Sialkot',
+    'Bahawalpur', 'Sargodha', 'Sheikhupura', 'Jhang', 'Rahim Yar Khan',
+    'Gujrat', 'Kasur', 'Chak Jhumra', 'Sahiwal', 'Okara', 'Wah Cantt',
+    'Dera Ghazi Khan', 'Kamoke', 'Mandi Bahauddin', 'Hafizabad', 'Murree',
+    'Taxila', 'Muzaffargarh', 'Khanewal', 'Jhelum', 'Chiniot', 'Attock',
+    'Burewala', 'Vehari', 'Bahawalnagar', 'Pakpattan', 'Toba Tek Singh',
+    'Khushab', 'Mianwali', 'Lodhran', 'Chakwal', 'Layyah', 'Bhakkar',
+    'Narowal', 'Wazirabad', 'Nankana Sahib', 'Samundri', 'Jaranwala',
+    'Pattoki', 'Daska', 'Gojra', 'Bhalwal', 'Fateh Jang', 'Kamalia',
+    'Kot Addu', 'Chichawatni', 'Haroonabad', 'Jalalpur Jattan', 'Mailsi',
+    'Ahmedpur East', 'Kot Radha Kishan', 'Talagang', 'Mian Channu', 'Shorkot',
+    'Taunsa', 'Rajanpur', 'Alipur', 'Jatoi', 'Dunya Pur', 'Hasilpur',
+    'Yazman', 'Liaquatpur', 'Sadiqabad', 'Khanpur', 'Harappa'
+  ],
+  sindh: [
+    'Karachi', 'Hyderabad', 'Sukkur', 'Larkana', 'Nawabshah', 'Mirpur Khas',
+    'Jacobabad', 'Shikarpur', 'Khairpur', 'Dadu', 'Tando Adam', 'Tando Allahyar',
+    'Thatta', 'Badin', 'Umerkot', 'Kotri', 'Ghotki', 'Kashmore', 'Matiari',
+    'Sanghar', 'Sehwan', 'Rohri', 'Shahdadkot', 'Moro', 'Hala', 'Tando Muhammad Khan',
+    'Kandhkot', 'Mehar', 'Ratodero', 'Ranipur', 'Gambat', 'Pano Akil', 'Mirpur Mathelo',
+    'Khipro', 'Digri', 'Naukot', 'Mithi', 'Islamkot', 'Nagarparkar'
+  ],
+  'khyber pakhtunkhwa': [
+    'Peshawar', 'Mardan', 'Abbottabad', 'Swat', 'Mingora', 'Kohat',
+    'Dera Ismail Khan', 'Nowshera', 'Charsadda', 'Mansehra', 'Haripur',
+    'Swabi', 'Bannu', 'Hangu', 'Batkhela', 'Timergara', 'Dir', 'Chitral',
+    'Karak', 'Tank', 'Malakand', 'Risalpur', 'Parachinar', 'Buner',
+    'Shangla', 'Topi', 'Tangi', 'Shabqadar', 'Paharpur', 'Lakki Marwat',
+    'Alpuri', 'Daggar', 'Bara', 'Jamrud', 'Landi Kotal', 'Wana', 'Miranshah'
+  ],
+  balochistan: [
+    'Quetta', 'Turbat', 'Gwadar', 'Khuzdar', 'Sibi', 'Chaman', 'Hub',
+    'Zhob', 'Loralai', 'Pishin', 'Kalat', 'Dera Murad Jamali', 'Usta Mohammad',
+    'Nushki', 'Ziarat', 'Panjgur', 'Kharan', 'Mastung', 'Kohlu', 'Dera Bugti',
+    'Barkhan', 'Musakhel', 'Qila Abdullah', 'Qila Saifullah', 'Sohbatpur',
+    'Jafarabad', 'Awaran', 'Washuk', 'Lasbela', 'Ormara', 'Pasni', 'Jiwni'
+  ],
+  'islamabad capital territory': [
+    'Islamabad'
+  ],
+  'azad jammu & kashmir': [
+    'Muzaffarabad', 'Mirpur', 'Rawalakot', 'Kotli', 'Bhimber', 'Bagh',
+    'Hattian Bala', 'Haveli', 'Sudhanoti', 'Pallandri'
+  ],
+  'gilgit-baltistan': [
+    'Gilgit', 'Skardu', 'Hunza', 'Chilas', 'Astore', 'Ghanche', 'Ghizer',
+    'Nagar', 'Khaplu', 'Shigar'
+  ]
+}
+
+export function normalizeProvinceKey(provinceStr) {
+  if (!provinceStr) return ''
+  const p = String(provinceStr).toLowerCase()
+  if (p.includes('punjab')) return 'punjab'
+  if (p.includes('sindh')) return 'sindh'
+  if (p.includes('khyber') || p.includes('kpk')) return 'khyber pakhtunkhwa'
+  if (p.includes('balochistan')) return 'balochistan'
+  if (p.includes('islamabad') || p.includes('ict')) return 'islamabad capital territory'
+  if (p.includes('azad') || p.includes('ajk') || p.includes('kashmir')) return 'azad jammu & kashmir'
+  if (p.includes('gilgit') || p.includes('gb')) return 'gilgit-baltistan'
+  return ''
+}
+
+export function getCitiesForProvince(provinceName) {
+  const key = normalizeProvinceKey(provinceName)
+  return CITIES_BY_PROVINCE_PK[key] || []
+}
+
+/**
+ * Validates whether the typed city belongs to the selected province
+ */
+export function validateCityForProvince(cityName, provinceName, country = 'Pakistan') {
+  if (!cityName || !String(cityName).trim()) {
+    return { isValid: false, message: 'City name is required.' }
+  }
+
+  const isPakistan = !country || String(country).toLowerCase().includes('pak')
+  if (!isPakistan) {
+    const validLetters = /^[a-zA-Z\s'.-]{2,50}$/.test(String(cityName).trim())
+    return {
+      isValid: validLetters,
+      message: validLetters ? null : 'Please enter a valid city name (letters only).',
+    }
+  }
+
+  const cleanCity = String(cityName).trim().toLowerCase()
+  const provinceKey = normalizeProvinceKey(provinceName)
+
+  if (!provinceKey) {
+    return {
+      isValid: false,
+      message: 'Please select a valid State / Province first.',
+    }
+  }
+
+  const allowedCities = CITIES_BY_PROVINCE_PK[provinceKey] || []
+  const foundCity = allowedCities.find((c) => c.toLowerCase() === cleanCity)
+
+  if (foundCity) {
+    return { isValid: true, matchedCity: foundCity, message: null }
+  }
+
+  // Check if user entered a city that belongs to a different province
+  for (const [otherProv, citiesList] of Object.entries(CITIES_BY_PROVINCE_PK)) {
+    if (otherProv === provinceKey) continue
+    const matchedOther = citiesList.find((c) => c.toLowerCase() === cleanCity)
+    if (matchedOther) {
+      const properOther = otherProv.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      const properCurr = provinceKey.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      return {
+        isValid: false,
+        message: `'${cityName}' is in ${properOther}, not ${properCurr}. Please enter a city located in ${properCurr}.`,
+      }
+    }
+  }
+
+  const properCurr = provinceKey.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  const sampleCities = allowedCities.slice(0, 4).join(', ')
+  return {
+    isValid: false,
+    message: `'${cityName}' is not recognized in ${properCurr}. Please enter a valid city in ${properCurr} (e.g. ${sampleCities}).`,
+  }
+}
+
+/**
+ * Auto-formats phone number into: +92 300 1234567
+ */
+export function formatPakistanPhone(input) {
+  if (!input) return ''
+  const str = String(input)
+
+  // Strip non-digits
+  let digits = str.replace(/\D/g, '')
+
+  // Remove leading 92 if already entered
+  if (digits.startsWith('92')) {
+    digits = digits.slice(2)
+  }
+  // Remove leading 0 if entered (e.g. 0300)
+  if (digits.startsWith('0')) {
+    digits = digits.slice(1)
+  }
+
+  // Limit to 10 mobile digits (3xx xxxxxxx)
+  digits = digits.slice(0, 10)
+
+  if (!digits) return ''
+
+  let formatted = '+92 '
+  if (digits.length <= 3) {
+    formatted += digits
+  } else {
+    formatted += digits.slice(0, 3) + ' ' + digits.slice(3)
+  }
+
+  return formatted
+}
+
+/**
+ * Validates strict format: +92 300 1234567
+ */
+export function validatePakistanPhone(phone) {
+  if (!phone || !String(phone).trim()) {
+    return {
+      isValid: false,
+      message: 'Phone number is required. Format: +92 300 1234567',
+    }
+  }
+
+  const clean = String(phone).trim()
+  const pkPhoneRegex = /^\+92\s3\d{2}\s\d{7}$/
+
+  if (!pkPhoneRegex.test(clean)) {
+    return {
+      isValid: false,
+      message: 'Phone number must be in exact format: +92 300 1234567 (e.g. +92 300 1234567).',
+    }
+  }
+
+  return { isValid: true, message: null }
+}
+

@@ -130,6 +130,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
       streetAddress: resolvedAddress,
       city: resolvedCity,
       state: resolvedState,
+      country: resolvedCountry,
     })
 
     if (!isValid) {

@@ -1,6 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Truck, ChevronDown, AlertCircle } from 'lucide-react'
-import { ALL_COUNTRIES, POPULAR_COUNTRIES, getStatesForCountry } from '../../utils/geoData'
+import {
+  ALL_COUNTRIES,
+  POPULAR_COUNTRIES,
+  getStatesForCountry,
+  getCitiesForProvince,
+} from '../../utils/geoData'
 
 const normalizeCountryName = (c) => {
   if (!c) return 'Pakistan'
@@ -33,7 +38,7 @@ export default function ShippingAddressCard({
     streetAddress: initialAddress?.address || initialAddress?.streetAddress || '',
     apartment: initialAddress?.apartment || '',
     city: initialAddress?.city || '',
-    state: initialAddress?.state || (initialStates.length > 0 ? initialStates[0] : ''),
+    state: initialAddress?.state || (initialStates.length > 0 ? initialStates[0] : 'Punjab'),
     postalCode: initialAddress?.zipCode || initialAddress?.postalCode || '',
     country: defaultCountry,
   })
@@ -45,11 +50,16 @@ export default function ShippingAddressCard({
     return getStatesForCountry(formData.country)
   }, [formData.country])
 
+  // Dynamically resolve cities for the chosen province
+  const availableCities = useMemo(() => {
+    return getCitiesForProvince(formData.state)
+  }, [formData.state])
+
   useEffect(() => {
     if (initialAddress) {
       const resolvedCountry = normalizeCountryName(initialAddress.country || formData.country)
       const states = getStatesForCountry(resolvedCountry)
-      const resolvedState = initialAddress.state || (states.length > 0 ? states[0] : '')
+      const resolvedState = initialAddress.state || (states.length > 0 ? states[0] : 'Punjab')
 
       setFormData((prev) => ({
         firstName: initialAddress.firstName !== undefined ? initialAddress.firstName : prev.firstName,
@@ -73,9 +83,24 @@ export default function ShippingAddressCard({
   }, [initialAddress])
 
   const handleChange = (field, value) => {
-    const updated = { ...formData, [field]: value }
+    let updated = { ...formData, [field]: value }
+
+    // If province changes, clear errors for state and city
+    if (field === 'state') {
+      if (clearFieldError) {
+        clearFieldError('state')
+        clearFieldError('city')
+      }
+      // Check if current city is valid in new province; if not, reset city
+      const newCities = getCitiesForProvince(value)
+      if (newCities.length > 0 && formData.city && !newCities.map(c => c.toLowerCase()).includes(formData.city.toLowerCase())) {
+        updated.city = ''
+      }
+    } else if (clearFieldError) {
+      clearFieldError(field)
+    }
+
     setFormData(updated)
-    if (clearFieldError) clearFieldError(field)
     if (onChange) onChange(updated)
   }
 
@@ -96,9 +121,14 @@ export default function ShippingAddressCard({
       ...formData,
       country: newCountry,
       state: newState,
+      city: '',
     }
     setFormData(updated)
-    if (clearFieldError) clearFieldError('country')
+    if (clearFieldError) {
+      clearFieldError('country')
+      clearFieldError('state')
+      clearFieldError('city')
+    }
     if (onChange) onChange(updated)
   }
 
@@ -228,31 +258,9 @@ export default function ShippingAddressCard({
           </div>
         </div>
 
-        {/* City, State / Province, Postal Code */}
+        {/* State / Province (First) then City (linked to Province) and Postal Code */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-              City <span className="text-[#c81d25]">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.city}
-              onChange={(e) => handleChange('city', e.target.value)}
-              className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
-                errors.city
-                  ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
-                  : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
-              }`}
-              placeholder="e.g. Chak Jhumra, Lahore, New York"
-            />
-            {errors.city && (
-              <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{errors.city}</span>
-              </div>
-            )}
-          </div>
-
+          {/* 1. State / Province */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider">
@@ -330,6 +338,55 @@ export default function ShippingAddressCard({
             )}
           </div>
 
+          {/* 2. City (Strictly validated for the selected Province) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider">
+                City <span className="text-[#c81d25]">*</span>
+              </label>
+              {availableCities.length > 0 && (
+                <span className="text-[10px] text-neutral-400 font-medium">
+                  {formData.state ? `${formData.state.split(' ')[0]} cities` : ''}
+                </span>
+              )}
+            </div>
+            <input
+              type="text"
+              list="province-city-datalist"
+              value={formData.city}
+              onChange={(e) => handleChange('city', e.target.value)}
+              className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
+                errors.city
+                  ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
+                  : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
+              }`}
+              placeholder={
+                availableCities.length > 0
+                  ? `e.g. ${availableCities.slice(0, 3).join(', ')}`
+                  : 'Enter City name'
+              }
+            />
+
+            {/* Datalist auto-suggesting cities for the selected province */}
+            {availableCities.length > 0 && (
+              <datalist id="province-city-datalist">
+                {availableCities.map((c) => (
+                  <option key={c} value={c}>
+                    {c} ({formData.state})
+                  </option>
+                ))}
+              </datalist>
+            )}
+
+            {errors.city && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{errors.city}</span>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Postal Code */}
           <div>
             <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
               Postal Code
