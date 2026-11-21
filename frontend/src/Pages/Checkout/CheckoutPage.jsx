@@ -12,6 +12,7 @@ import OrderBreakdownCard from '../../Components/Checkout/OrderBreakdownCard'
 import PaymentMethodCard from '../../Components/Checkout/PaymentMethodCard'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
+import { useCheckoutValidation } from '../../hooks/useCheckoutValidation'
 import { api } from '../../services/api'
 import { ROUTE_MAP } from '../../hooks/useAppNavigate'
 
@@ -104,6 +105,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
   }
 
   const [isProcessing, setIsProcessing] = useState(false)
+  const { errors, validate, clearFieldError } = useCheckoutValidation()
 
   const handlePlaceOrder = async (paymentDetails = {}) => {
     if (items.length === 0) {
@@ -112,12 +114,7 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     }
 
     const email = (contactInfo.email || currentUser?.email || '').trim()
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!email || !emailRegex.test(email)) {
-      showToast('Please enter a valid email address for order confirmation.')
-      return
-    }
-
+    const phone = (contactInfo.phone || currentUser?.phone || '').trim()
     const firstName = (shippingAddress.firstName || currentUser?.name?.split(' ')[0] || '').trim()
     const lastName = (shippingAddress.lastName || currentUser?.name?.split(' ')[1] || '').trim()
     const resolvedAddress = (shippingAddress.streetAddress || shippingAddress.address || '').trim()
@@ -126,18 +123,17 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
     const resolvedZip = (shippingAddress.postalCode || shippingAddress.zipCode || '38000').trim()
     const resolvedCountry = (shippingAddress.country || 'Pakistan').trim()
 
-    if (!firstName) {
-      showToast('Please enter your First Name for delivery.')
-      return
-    }
+    const { isValid, firstErrorMessage } = validate({
+      email,
+      phone,
+      firstName,
+      streetAddress: resolvedAddress,
+      city: resolvedCity,
+      state: resolvedState,
+    })
 
-    if (!resolvedAddress) {
-      showToast('Please enter your Street Address.')
-      return
-    }
-
-    if (!resolvedCity) {
-      showToast('Please enter your City.')
+    if (!isValid) {
+      showToast(firstErrorMessage || 'Please enter valid details in all required fields.')
       return
     }
 
@@ -363,12 +359,16 @@ export default function CheckoutPage({ onNavigate, onSelectProduct }) {
               <ContactInformationCard
                 email={contactInfo.email}
                 phone={contactInfo.phone}
+                errors={errors}
+                clearFieldError={clearFieldError}
                 onChange={setContactInfo}
                 onLoginClick={() => (onNavigate ? onNavigate('LOGIN') : navigate('/login'))}
               />
 
               <ShippingAddressCard
                 initialAddress={shippingAddress}
+                errors={errors}
+                clearFieldError={clearFieldError}
                 onChange={setShippingAddress}
               />
 

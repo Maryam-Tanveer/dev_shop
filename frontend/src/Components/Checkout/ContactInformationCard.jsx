@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Contact, Check } from 'lucide-react'
+import { Contact, Check, AlertCircle } from 'lucide-react'
 
 export default function ContactInformationCard({
   email = '',
   phone = '',
+  errors = {},
+  clearFieldError,
   onLoginClick,
   onChange,
 }) {
@@ -21,11 +23,13 @@ export default function ContactInformationCard({
 
   const handleEmailChange = (val) => {
     setEmailVal(val)
+    if (clearFieldError) clearFieldError('email')
     if (onChange) onChange({ email: val, phone: phoneVal })
   }
 
   const handlePhoneChange = (val) => {
     setPhoneVal(val)
+    if (clearFieldError) clearFieldError('phone')
     if (onChange) onChange({ email: emailVal, phone: val })
   }
 
@@ -59,29 +63,49 @@ export default function ContactInformationCard({
         {/* Email Address */}
         <div>
           <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-            Email Address
+            Email Address <span className="text-[#c81d25]">*</span>
           </label>
           <input
             type="email"
             value={emailVal}
             onChange={(e) => handleEmailChange(e.target.value)}
-            className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none"
+            className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
+              errors.email
+                ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
+                : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
+            }`}
             placeholder="your.email@example.com"
           />
+          {errors.email && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{errors.email}</span>
+            </div>
+          )}
         </div>
 
         {/* Phone Number */}
         <div>
           <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-            Phone Number for Drop Dispatch
+            Phone Number for Drop Dispatch <span className="text-[#c81d25]">*</span>
           </label>
           <input
             type="tel"
             value={phoneVal}
             onChange={(e) => handlePhoneChange(e.target.value)}
-            className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none"
-            placeholder="+1 (555) 000-0000"
+            className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
+              errors.phone
+                ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
+                : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
+            }`}
+            placeholder="e.g. 03001234567 or +92 300 1234567"
           />
+          {errors.phone && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{errors.phone}</span>
+            </div>
+          )}
         </div>
 
         {/* Checkbox */}

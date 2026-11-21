@@ -9,7 +9,7 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
     user: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'User',
       default: null,
     },
@@ -42,7 +42,6 @@ const orderSchema = new mongoose.Schema(
     },
     shippingMethod: {
       type: String,
-      enum: ['standard', 'priority'],
       default: 'standard',
     },
     paymentMethod: {

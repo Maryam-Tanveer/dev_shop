@@ -171,9 +171,14 @@ export const createOrder = asyncHandler(async (req, res, next) => {
   const initialStatus = 'Confirmed'
   const initialPaymentStatus = isCod ? 'unpaid' : 'paid'
 
+  const rawUserId = req.user?._id || req.user?.id || null
+  const resolvedUserId = rawUserId
+    ? (/^[0-9a-fA-F]{24}$/.test(String(rawUserId)) ? rawUserId : String(rawUserId))
+    : null
+
   const newOrderData = {
     orderNumber,
-    user: req.user?._id || req.user?.id || null,
+    user: resolvedUserId,
     userEmail: email,
     items: sanitizedItems,
     shippingAddress,
@@ -203,9 +208,16 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     finalOrder = savedOrder.toObject ? savedOrder.toObject() : savedOrder
   } catch (err) {
     console.warn('[Order.create DB fallback]:', err.message)
-    finalOrder = {
-      _id: `ord_${Date.now()}`,
-      ...newOrderData,
+    try {
+      const retryOrder = await Order.create({ ...newOrderData, user: null })
+      finalOrder = retryOrder.toObject ? retryOrder.toObject() : retryOrder
+      console.log(`[Order.create Retry] Successfully saved order ${orderNumber} to MongoDB without user binding`)
+    } catch (retryErr) {
+      console.error('[Order DB Critical Error]:', retryErr.message)
+      finalOrder = {
+        _id: `ord_${Date.now()}`,
+        ...newOrderData,
+      }
     }
   }
 

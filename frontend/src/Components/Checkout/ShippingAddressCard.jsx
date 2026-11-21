@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Truck, ChevronDown } from 'lucide-react'
+import { Truck, ChevronDown, AlertCircle } from 'lucide-react'
 import { ALL_COUNTRIES, POPULAR_COUNTRIES, getStatesForCountry } from '../../utils/geoData'
 
 const normalizeCountryName = (c) => {
@@ -21,6 +21,8 @@ const normalizeCountryName = (c) => {
 export default function ShippingAddressCard({
   initialAddress,
   onChange,
+  errors = {},
+  clearFieldError,
 }) {
   const defaultCountry = normalizeCountryName(initialAddress?.country || 'Pakistan')
   const initialStates = getStatesForCountry(defaultCountry)
@@ -73,6 +75,7 @@ export default function ShippingAddressCard({
   const handleChange = (field, value) => {
     const updated = { ...formData, [field]: value }
     setFormData(updated)
+    if (clearFieldError) clearFieldError(field)
     if (onChange) onChange(updated)
   }
 
@@ -95,6 +98,7 @@ export default function ShippingAddressCard({
       state: newState,
     }
     setFormData(updated)
+    if (clearFieldError) clearFieldError('country')
     if (onChange) onChange(updated)
   }
 
@@ -121,15 +125,25 @@ export default function ShippingAddressCard({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-              First Name
+              First Name <span className="text-[#c81d25]">*</span>
             </label>
             <input
               type="text"
               value={formData.firstName}
               onChange={(e) => handleChange('firstName', e.target.value)}
-              className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none"
+              className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
+                errors.firstName
+                  ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
+                  : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
+              }`}
               placeholder="First Name"
             />
+            {errors.firstName && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{errors.firstName}</span>
+              </div>
+            )}
           </div>
 
           <div>
@@ -149,15 +163,25 @@ export default function ShippingAddressCard({
         {/* Street Address */}
         <div>
           <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-            Street Address
+            Street Address <span className="text-[#c81d25]">*</span>
           </label>
           <input
             type="text"
             value={formData.streetAddress}
             onChange={(e) => handleChange('streetAddress', e.target.value)}
-            className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none"
+            className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
+              errors.streetAddress
+                ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
+                : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
+            }`}
             placeholder="Street Address, House/Building Number, P.O. Box"
           />
+          {errors.streetAddress && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{errors.streetAddress}</span>
+            </div>
+          )}
         </div>
 
         {/* Apartment / Suite */}
@@ -208,21 +232,31 @@ export default function ShippingAddressCard({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-              City
+              City <span className="text-[#c81d25]">*</span>
             </label>
             <input
               type="text"
               value={formData.city}
               onChange={(e) => handleChange('city', e.target.value)}
-              className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none"
+              className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
+                errors.city
+                  ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
+                  : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
+              }`}
               placeholder="e.g. Chak Jhumra, Lahore, New York"
             />
+            {errors.city && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{errors.city}</span>
+              </div>
+            )}
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider">
-                State / Province
+                State / Province <span className="text-[#c81d25]">*</span>
               </label>
               {availableStates.length > 0 && (
                 <button
@@ -255,7 +289,11 @@ export default function ShippingAddressCard({
                       handleChange('state', e.target.value)
                     }
                   }}
-                  className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none appearance-none cursor-pointer pr-10"
+                  className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none appearance-none cursor-pointer pr-10 ${
+                    errors.state
+                      ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
+                      : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
+                  }`}
                 >
                   {!availableStates.includes(formData.state) && (
                     <option value="" disabled>
@@ -276,9 +314,19 @@ export default function ShippingAddressCard({
                 type="text"
                 value={formData.state}
                 onChange={(e) => handleChange('state', e.target.value)}
-                className="w-full bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-xl px-4 py-3 text-xs sm:text-sm font-medium text-neutral-800 transition outline-none"
+                className={`w-full rounded-xl px-4 py-3 text-xs sm:text-sm font-medium transition outline-none ${
+                  errors.state
+                    ? 'bg-red-50/50 border-2 border-red-500 text-red-900 focus:bg-white'
+                    : 'bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 text-neutral-800'
+                }`}
                 placeholder={availableStates.length > 0 ? "Enter state or province" : "State / Province / Region"}
               />
+            )}
+            {errors.state && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-red-600 text-[11px] font-medium">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{errors.state}</span>
+              </div>
             )}
           </div>
 

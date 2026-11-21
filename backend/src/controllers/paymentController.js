@@ -111,9 +111,14 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
   const orderNumber = `DEV-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 
   // 2. Create Order with PENDING status (Order is NOT confirmed until payment succeeds)
+  const rawUserId = req.user?._id || req.user?.id || null
+  const resolvedUserId = rawUserId
+    ? (/^[0-9a-fA-F]{24}$/.test(String(rawUserId)) ? rawUserId : String(rawUserId))
+    : null
+
   const newOrderData = {
     orderNumber,
-    user: req.user?._id || req.user?.id || null,
+    user: resolvedUserId,
     userEmail: email,
     items: sanitizedItems,
     shippingAddress,
@@ -135,9 +140,16 @@ export const createCheckoutSession = asyncHandler(async (req, res, next) => {
     savedOrder = created.toObject ? created.toObject() : created
   } catch (err) {
     console.warn('[Stripe Order.create DB fallback]:', err.message)
-    savedOrder = {
-      _id: `ord_${Date.now()}`,
-      ...newOrderData,
+    try {
+      const retryCreated = await Order.create({ ...newOrderData, user: null })
+      savedOrder = retryCreated.toObject ? retryCreated.toObject() : retryCreated
+      console.log(`[Stripe Order.create Retry] Successfully saved order ${orderNumber} to MongoDB without user binding`)
+    } catch (retryErr) {
+      console.error('[Stripe Order DB Critical Error]:', retryErr.message)
+      savedOrder = {
+        _id: `ord_${Date.now()}`,
+        ...newOrderData,
+      }
     }
   }
 
